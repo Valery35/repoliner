@@ -1,0 +1,53 @@
+[general]
+name=Repoliner - репозитории модулей
+qgisMinimumVersion=3.16
+qgisMaximumVersion=4.99
+description=Builds a QGIS plugin repository (plugins.xml) from ready-made plugin archives. Собирает репозиторий модулей QGIS (plugins.xml) из готовых архивов модулей.
+about=Select plugin zip archives, and Repoliner reads metadata.txt from each of them and writes plugins.xml in the format of the QGIS plugin repository. Several repositories are kept at once, each with its own set of plugins. For every plugin the window shows whether its archive is in place and whether the archive version matches the registry. The registry address is copied in the file:/// form and added in Plugins - Manage and Install Plugins - Settings. Developed by Inform++ LLC (www.informpp.ru).
+    .
+    Выбираются zip-архивы модулей, Repoliner читает metadata.txt каждого из них и записывает plugins.xml в формате репозитория модулей QGIS. Окно держит несколько репозиториев, в каждом свой набор модулей. У каждого модуля видно, на месте ли архив и совпадает ли его версия с реестром. Адрес реестра копируется в виде file:/// и добавляется в Модули - Управление и установка модулей - Настройки. Разработано ООО «Информ++» (www.informpp.ru).
+version=0.1.4
+author=ООО «Информ++»
+email=xbbster@gmail.com
+homepage=https://github.com/Valery35/repoliner
+tracker=https://github.com/Valery35/repoliner/issues
+repository=https://github.com/Valery35/repoliner
+tags=plugin repository,plugins.xml,plugin manager,deployment,offline
+category=Plugins
+icon=icon.svg
+experimental=False
+deprecated=False
+hasProcessingProvider=no
+changelog=0.1.4
+    - Первая версия в каталоге модулей QGIS. Модуль больше не помечен
+      экспериментальным и виден без галки экспериментальных модулей.
+    - Адреса страницы модуля, кода и трекера ошибок ведут на
+      github.com/Valery35/repoliner.
+    0.1.3
+    - Модуль из другого репозитория упоминается один раз, со старшей
+      версией. Если версия там та же, что в реестре, предупреждения нет.
+    0.1.2
+    - Кнопка «Подключить в QGIS» добавляет реестр в менеджер модулей
+      без ручного ввода адреса. Реестр с тем же адресом повторно не
+      добавляется.
+    - Кнопка «Адрес сервера» для реестра, который раздаёт веб-сервер.
+      Адреса архивов переписываются от адреса сервера, архивы должны
+      лежать в папке реестра или ниже.
+    - Реестр в общей сетевой папке Windows (\\сервер\папка)
+      получает адреса, которые открывает QGIS.
+    - У модуля видно, если QGIS получил его же из другого репозитория,
+      например из официального каталога, и какую версию.
+    0.1.1
+    - Модули из архивов с произвольным именем файла теперь ставятся из
+      реестра. Раньше на архиве topoliner_upload.zip с модулем topoliner
+      внутри установка обрывалась с ошибкой записи в папку модулей.
+    - Реестр, собранный версией 0.1.0, показывает у таких модулей
+      «архив не совпадает с реестром». Кнопки «Перечитать архивы» и
+      «Сохранить» исправляют запись.
+    0.1.0
+    - Первая версия. Окно «Репозитории модулей» собирает plugins.xml из
+      готовых zip-архивов, читает созданные им реестры и держит их
+      список в настройках QGIS.
+    - Адрес модуля в реестре ведёт на место архива на диске (file:///).
+      Архивы не копируются.
+    - Архив с тем же именем заменяет модуль в реестре новой версией.
