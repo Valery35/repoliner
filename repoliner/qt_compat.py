@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Совместимость Qt5 и Qt6.
+"""Qt5 and Qt6 compatibility.
 
-QGIS 3 собран на Qt5, QGIS 4 - на Qt6. В Qt6 перечисления строгие: вместо
-`Qt.WaitCursor` нужно `Qt.CursorShape.WaitCursor`, вместо `Qt.UserRole` -
-`Qt.ItemDataRole.UserRole`. Плоское имя там просто отсутствует, и обращение
-к нему роняет окно с AttributeError.
+QGIS 3 is built on Qt5, QGIS 4 on Qt6. In Qt6 the enumerations are
+strict: `Qt.CursorShape.WaitCursor` is needed instead of
+`Qt.WaitCursor`, and `Qt.ItemDataRole.UserRole` instead of
+`Qt.UserRole`. The flat name is simply absent there, and a call to it
+brings the window down with an AttributeError.
 
-Константы разрешаются здесь один раз, чтобы в остальном коде не было
-развилок по версии.
+The constants are resolved here once, so that the rest of the code has
+no branches by version.
 """
 
 from qgis.PyQt.QtCore import Qt
 
 
 def _c(scope, name):
-    """Строгое имя (Qt6), иначе плоское (Qt5)."""
+    """The strict name (Qt6), otherwise the flat one (Qt5)."""
     holder = getattr(Qt, scope, None)
     if holder is not None and hasattr(holder, name):
         return getattr(holder, name)
@@ -34,7 +35,8 @@ NonModal            = _c("WindowModality", "NonModal")
 
 
 def dbb(name):
-    """Кнопки QDialogButtonBox: в Qt6 разнесены по StandardButton и ButtonRole.
+    """QDialogButtonBox buttons: in Qt6 they are split between
+    StandardButton and ButtonRole.
 
     dbb('Ok'), dbb('Cancel'), dbb('ActionRole'), dbb('RejectRole').
     """

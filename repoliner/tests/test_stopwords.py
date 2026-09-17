@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-"""Стоп-слова публикуемых текстов.
+"""Stop words of published texts.
 
-Правило принято для всего, что уходит наружу: справки инструментов,
-описание и changelog в metadata.txt, стили, шаблоны. Проверка в
-tests/test_i18n.py смотрела только модули пакета и жила под
-``if __name__ == "__main__"``, поэтому pytest её не собирал вовсе, а
-changelog не попадал в неё и по составу файлов. Так в записи 4.85.0
-оказалось «врёт», а в 4.86.0 - «честно».
+The rule is adopted for everything that goes outside: tool help texts,
+the description and the changelog in metadata.txt, styles, templates.
+The check in tests/test_i18n.py looked only at the package modules and
+lived under ``if __name__ == "__main__"``, so pytest did not collect it
+at all, and the changelog did not get into it by the set of files
+either. That is how «врёт» ended up in entry 4.85.0 and «честно» in
+4.86.0.
 
-Тесты пакета сюда не входят: это рабочие тексты для своих, правило про
-публикуемые. Тире ищется только в русском тексте по соседству с
-кириллицей, чтобы не задевать таблицы и разметку.
+The package tests are not included here: those are working texts for
+insiders, and the rule is about published ones. The dash is looked for
+only in Russian text next to Cyrillic, so as not to touch tables and
+markup.
 """
 import os
 import re
@@ -23,7 +25,7 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(HERE)
 
-# Слово: почему запрещено
+# Word: why it is banned
 STOP_WORDS = {
     r"честн[а-яё]+": "«честный» - затычка вместо сути, писать «корректнее»",
     r"врёт|врут|врал[а-яё]*": "«врёт» - о программе так не пишем",
@@ -37,13 +39,13 @@ STOP_WORDS = {
     r"главн[а-яё]* грабл[а-яё]*": "«главные грабли» - писать «главная ошибка»",
 }
 
-# Тире между кириллическими словами. В коде тире встречается ещё как
-# символ-заполнитель, поэтому смотрим именно прозу.
+# An em dash between Cyrillic words. In code the dash also occurs as a
+# filler character, so we look exactly at prose.
 DASH = re.compile(r"[А-Яа-яЁё][^\n]{0,40}—|—[^\n]{0,40}[А-Яа-яЁё]")
 
 
 def _published_files():
-    """Файлы, попадающие к пользователю. Тесты исключены осознанно."""
+    """Files that reach the user. Tests are excluded deliberately."""
     out = []
     for name in sorted(os.listdir(PKG)):
         if name.endswith(".py") or name == "metadata.txt":
@@ -57,7 +59,7 @@ def _published_files():
 
 
 def _hits(pattern, text):
-    """Список (номер строки, строка) для каждого совпадения."""
+    """List of (line number, line) for every match."""
     found = []
     for m in re.finditer(pattern, text):
         line = text.count("\n", 0, m.start()) + 1
@@ -88,10 +90,12 @@ def test_no_em_dash_in_russian_prose():
 
 
 def test_metadata_changelog_is_covered():
-    """Сторож самого сторожа: changelog обязан попадать в проверку.
+    """A guard for the guard itself: the changelog must fall under the
+    check.
 
-    Ошибка была не в правиле, а в охвате. Если metadata.txt однажды
-    выпадет из списка файлов, тесты выше замолчат и ничего не заметят.
+    The error was not in the rule but in the coverage. If metadata.txt
+    one day drops out of the list of files, the tests above will fall
+    silent and notice nothing.
     """
     names = [os.path.basename(p) for p in _published_files()]
     assert "metadata.txt" in names, "metadata.txt выпал из проверки"

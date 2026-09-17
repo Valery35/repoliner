@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Класс модуля: пункт меню «Модули - Repoliner» и кнопка на панели.
+"""Plugin class: the "Plugins - Repoliner" menu item and a toolbar button.
 
-Совместимо с QGIS 3.16 - 4.x (Qt5 и Qt6).
+Compatible with QGIS 3.16 - 4.x (Qt5 and Qt6).
 """
 import os
 

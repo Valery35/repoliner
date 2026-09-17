@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Сборка архивов Repoliner.
+"""Build the Repoliner archives.
 
-Запуск из корня репозитория:
+Run from the repository root:
 
     python scripts/build_zip.py
 
-Кладёт в dist/ два архива с корневой папкой repoliner:
-- repoliner.zip - рабочий, с tests/;
-- repoliner_upload.zip - для plugins.qgis.org, без tests/.
-Кэш Python, .pytest_cache и служебные файлы в архив не идут: сканер
-каталога однажды заблокировал версию из-за .pytest_cache/CACHEDIR.TAG.
-В конце печатается версия, прочитанная из каждого собранного архива.
+Writes two archives into dist/, each with a repoliner root folder:
+- repoliner.zip - the working one, with tests/;
+- repoliner_upload.zip - for plugins.qgis.org, without tests/.
+Python caches, .pytest_cache and helper files stay out of the archive:
+the repository scanner once blocked a release because of
+.pytest_cache/CACHEDIR.TAG.
+At the end the version read back from each built archive is printed.
 """
 import configparser
 import io
@@ -61,8 +62,8 @@ def main():
                              ("repoliner_upload.zip", False)):
         out = build(name, with_tests)
         v, n, t = version_in(out)
-        print("%-22s версия %s, файлов %d, tests/ %s"
-              % (name, v, n, "есть" if t else "нет"))
+        print("%-22s version %s, files %d, tests/ %s"
+              % (name, v, n, "yes" if t else "no"))
 
 
 if __name__ == "__main__":

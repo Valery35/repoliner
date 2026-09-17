@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Это свободная программа: вы можете распространять её и/или изменять на
-# условиях Стандартной общественной лицензии GNU (GNU GPL), опубликованной
-# Фондом свободного ПО (FSF), - либо версии 2 Лицензии, либо (на ваше
-# усмотрение) любой более поздней версии.
+# This is free software: you may redistribute it and/or modify it under
+# the terms of the GNU General Public License (GNU GPL) published by the
+# Free Software Foundation (FSF), either version 2 of the License or (at
+# your option) any later version.
 #
-# Программа распространяется в надежде на полезность, но БЕЗ КАКИХ-ЛИБО
-# ГАРАНТИЙ, в том числе без подразумеваемой гарантии ТОВАРНОГО СОСТОЯНИЯ или
-# ПРИГОДНОСТИ ДЛЯ ОПРЕДЕЛЁННОЙ ЦЕЛИ. Подробнее см. GNU GPL.
+# The program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, including without the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU GPL
+# for details.
 #
-# Полный текст лицензии - в файле LICENSE (на английском, юридически значим).
-"""Repoliner - репозитории модулей QGIS. Точка входа модуля."""
+# The full licence text is in the LICENSE file (in English, it is the
+# legally binding one).
+"""Repoliner - QGIS plugin repositories. Module entry point."""
 
 
 def classFactory(iface):

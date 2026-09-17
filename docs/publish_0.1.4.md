@@ -1,50 +1,63 @@
-# Выкладка Repoliner 0.1.4
+# Publishing Repoliner 0.1.4
 
-Порядок: GitHub, затем каталог plugins.qgis.org, затем анонс. Анонс
-пишется после того, как версия прошла модерацию каталога.
+Order: GitHub, then the plugins.qgis.org catalog, then the
+announcement. The announcement is written after the version has passed
+catalog moderation.
 
 ## 1. GitHub
 
-1. На github.com создать пустой репозиторий `Valery35/repoliner`,
-   публичный, без README, лицензии и .gitignore. В папке модуля они уже
-   есть, а с ними на GitHub первый пуш откажет из-за расхождения истории.
-2. Папка `Dropbox\ИИ\Repoliner` уже является репозиторием git с одним
-   коммитом и адресом `origin` = `https://github.com/Valery35/repoliner.git`.
-   - GitHub Desktop: File - Add local repository - папка
-     `Dropbox\ИИ\Repoliner` - Push origin.
-   - Или в консоли из этой папки: `git push -u origin main`.
-3. Проверить на странице репозитория: README виден, папка `repoliner/`
-   на месте, архивов `dist/` нет.
-4. Releases - Draft a new release: тег `v0.1.4`, название
-   `Repoliner 0.1.4`, текст из раздела 4 ниже, приложить
+The folder `Dropbox\ИИ\Repoliner` is ready for publishing, but it is
+not a git repository yet. Git is not installed on this machine, so use
+GitHub Desktop.
+
+1. GitHub Desktop: File - Add local repository - the folder
+   `Dropbox\ИИ\Repoliner`. The program will say that this is not a
+   repository and will offer **create a repository** - accept. Name it
+   `repoliner`, do not add README, .gitignore or a license: they are
+   already in the folder.
+2. Check the list of changes on the left: the archives `repoliner.zip`
+   and `repoliner_upload.zip` are not there, `.gitignore` excludes
+   them.
+3. Summary `Repoliner 0.1.4`, Commit to main.
+4. **Publish repository**: name `repoliner`, owner `Valery35`, clear
+   the Keep this code private checkbox.
+5. Check `https://github.com/Valery35/repoliner`: the README is
+   visible, the folder `repoliner/` is in place.
+6. On GitHub: Releases - Draft a new release, tag `v0.1.4`, title
+   `Repoliner 0.1.4`, text from section 4 below, attach
    `repoliner.zip`.
 
-## 2. Каталог plugins.qgis.org
+## 2. The plugins.qgis.org catalog
 
-1. Войти учётной записью OSGeo, Upload a plugin.
-2. Загрузить **`repoliner_upload.zip`**, а не `repoliner.zip`. В нём
-   нет тестов, сканер каталога на них ругается.
-3. После загрузки версия ждёт модератора. Модерация идёт по будням.
-4. Если модератор вернёт замечание, номер 0.1.4 уже занят. Исправление
-   идёт как 0.1.5.
+1. Sign in with the OSGeo account, Upload a plugin.
+2. Upload **`repoliner_upload.zip`**, not `repoliner.zip`. It has no
+   tests, the catalog scanner complains about them.
+3. After the upload the version waits for a moderator. Moderation runs
+   on weekdays.
+4. If the moderator returns a remark, the number 0.1.4 is already
+   taken. The fix goes out as 0.1.5.
 
-Что проверено до загрузки:
-- `metadata.txt` читается строгим разбором каталога, обязательные поля
-  на месте, `qgisMaximumVersion=4.99` (этого достаточно для списка
-  QGIS 4 Ready),
-- в архиве нет тестов, кэша и служебных файлов, есть LICENSE,
-- bandit и проверка архива (`tools/audit_archive.py`) ошибок не дают,
-- имя `repoliner` в каталоге не занято (по списку, который получил
-  QGIS 4.0.3 17.09.2026).
+What was checked before the upload:
+- `metadata.txt` is read by the strict parser of the catalog, the
+  required fields are in place, `qgisMaximumVersion=4.99` (this is
+  enough for the QGIS 4 Ready list),
+- the archive has no tests, no cache and no service files, LICENSE is
+  present,
+- bandit and the archive check (`tools/audit_archive.py`) report no
+  errors,
+- the name `repoliner` is not taken in the catalog (by the list that
+  QGIS 4.0.3 received on 17.09.2026).
 
-## 3. После публикации
+## 3. After publication
 
-1. В менеджере модулей QGIS найти Repoliner в официальном репозитории.
-   Установленная из архива 0.1.4 должна показываться как установленная,
-   а не как обновление.
-2. Дописать в AGENTS.md дату публикации.
+1. In the QGIS plugin manager find Repoliner in the official
+   repository. The 0.1.4 installed from the archive must be shown as
+   installed, not as an update.
+2. Add the publication date to AGENTS.md.
 
-## 4. Текст к выпуску
+## 4. Release text
+
+### Russian
 
 **Repoliner 0.1.4** - первая версия в каталоге модулей QGIS.
 
@@ -66,6 +79,8 @@ Repoliner собирает собственный репозиторий мод�
 
 Установка: Модули - Управление и установка модулей - найти Repoliner.
 QGIS 3.16 - 4.99.
+
+### English
 
 **Repoliner 0.1.4** - first release in the QGIS plugin catalogue.
 

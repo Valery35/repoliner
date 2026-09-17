@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Проверка архива модуля QGIS перед выкладкой в реестр или в каталог.
+"""Check a QGIS plugin archive before publishing it to a repository.
 
-    python tools/audit_archive.py архив.zip [архив.zip ...]
+    python tools/audit_archive.py archive.zip [archive.zip ...]
 
-Смотрит то, что уже блокировало или ломало выкладку модулей Информ++:
-поля metadata.txt, диапазон версий QGIS, мусор в архиве, конструкции,
-которые блокирует сканер каталога, и места, которые не переживут Qt6
-(QGIS 4). Находки Qt6 эвристические: это список мест для просмотра, а не
-приговор.
+It looks at what has already blocked or broken Inform++ plugin
+releases: metadata.txt fields, the QGIS version range, junk inside the
+archive, constructs the plugin repository scanner blocks, and places
+that will not survive Qt6 (QGIS 4). The Qt6 findings are heuristic:
+they are a list of places to review, not a verdict.
 """
 import configparser
 import io
@@ -24,22 +24,22 @@ JUNK = (r"(^|/)__pycache__/", r"\.py[co]$", r"(^|/)\.pytest_cache/",
         r"\.(orig|bak|swp|tmp)$", r"(^|/)\.idea/", r"(^|/)\.vscode/")
 SCANNER = (
     (r"\bimport\s+xml\b|\bfrom\s+xml[\s.]|\bElementTree\b|\bminidom\b"
-     r"|\bpyexpat\b", "модули xml (сканер каталога)"),
+     r"|\bpyexpat\b", "xml modules (repository scanner blocks them)"),
     (r"(?<![\w.])eval\s*\(", "eval"),
     (r"(?<![\w.])exec\s*\(", "exec"),
     (r"\bpickle\.loads?\s*\(", "pickle"),
     (r"shell\s*=\s*True", "shell=True"),
     (r"except(\s+Exception)?\s*:[ \t]*\n\s*(pass|continue)\b",
-     "голый except с pass/continue (bandit B110/B112)"),
+     "bare except with pass/continue (bandit B110/B112)"),
 )
 QT6 = (
-    (r"\.exec_\s*\(", "exec_() - в Qt6 только exec()"),
+    (r"\.exec_\s*\(", "exec_() - Qt6 has exec() only"),
     (r"QVariant\s*\(\s*\)|QVariant\.(Null|Invalid)\b",
-     "пустой QVariant - в Qt6 нужен NULL из qgis.core"),
+     "empty QVariant - Qt6 needs NULL from qgis.core"),
     (r"\bfrom\s+PyQt5\b|\bimport\s+PyQt5\b",
-     "прямой импорт PyQt5 - нужен qgis.PyQt"),
+     "direct PyQt5 import - use qgis.PyQt"),
     (r"from\s+qgis\.PyQt\.QtWidgets\s+import\s+[^\n]*\bQAction\b",
-     "QAction из QtWidgets - в Qt6 он в QtGui"),
+     "QAction from QtWidgets - in Qt6 it lives in QtGui"),
     (r"\bQt\.(AlignLeft|AlignRight|AlignCenter|AlignTop|AlignBottom|"
      r"UserRole|DisplayRole|Checked|Unchecked|WaitCursor|ItemIsEnabled|"
      r"ItemIsSelectable|ItemIsEditable|ItemIsUserCheckable|Horizontal|"
@@ -47,7 +47,7 @@ QT6 = (
      r"NoBrush|KeepAspectRatio|SmoothTransformation|RightDockWidgetArea|"
      r"LeftDockWidgetArea|CustomContextMenu|Key_\w+|ControlModifier|"
      r"ShiftModifier|LeftButton|RightButton)\b",
-     "плоское перечисление Qt - в Qt6 нужно полное имя"),
+     "flat Qt enum - Qt6 needs the full name"),
     (r"\bQ(MessageBox|DialogButtonBox|FileDialog|HeaderView|"
      r"AbstractItemView|SizePolicy|Frame)\.(Yes|No|Ok|Cancel|Save|"
      r"Discard|Close|Stretch|ResizeToContents|Interactive|"
@@ -55,16 +55,16 @@ QT6 = (
      r"Expanding|Preferred|Fixed|Minimum|HLine|VLine|Sunken|"
      r"AcceptRole|RejectRole|ActionRole|Warning|Information|Question|"
      r"Critical)\b",
-     "плоское перечисление виджета - в Qt6 нужно полное имя"),
-    (r"QRegExp\b", "QRegExp - в Qt6 нет, нужен QRegularExpression"),
-    (r"\bQDesktopWidget\b", "QDesktopWidget - в Qt6 нет"),
+     "flat widget enum - Qt6 needs the full name"),
+    (r"QRegExp\b", "QRegExp - gone in Qt6, use QRegularExpression"),
+    (r"\bQDesktopWidget\b", "QDesktopWidget - gone in Qt6"),
 )
 
 
 def _code(src):
-    """Текст без строк и комментариев, номера строк сохраняются.
+    """Text without literals and comments, line numbers are kept.
 
-    Возвращает (код, множество строк с меткой nosec)."""
+    Returns (code, set of line numbers marked with nosec)."""
     lines = src.splitlines(True)
     out = [list(l) for l in lines]
     nosec = set()
@@ -104,19 +104,19 @@ def audit(path):
     z = zipfile.ZipFile(path)
     names = z.namelist()
     roots = sorted({n.split("/")[0] for n in names if "/" in n})
-    rep["info"].append("папки в корне: %s, файлов %d" % (roots, len(names)))
+    rep["info"].append("root folders: %s, files %d" % (roots, len(names)))
     if len(roots) != 1:
-        rep["errors"].append("в корне архива должна быть одна папка модуля")
+        rep["errors"].append("the archive root must hold one plugin folder")
     root = roots[0] if roots else ""
     base = path.replace("\\", "/").rsplit("/", 1)[-1].partition(".")[0]
     if base != root:
         rep["warnings"].append(
-            "имя файла «%s» не совпадает с папкой «%s». Установка из ZIP и "
-            "Repoliner 0.1.1+ это переносят, реестр старого образца нет"
-            % (base, root))
+            "file name \"%s\" does not match the folder \"%s\". Install "
+            "from ZIP and Repoliner 0.1.1+ tolerate this, an old style "
+            "repository does not" % (base, root))
     meta = root + "/metadata.txt"
     if meta not in names:
-        rep["errors"].append("нет %s" % meta)
+        rep["errors"].append("%s is missing" % meta)
         return rep
     text = z.read(meta).decode("utf-8-sig", "replace")
     cp = configparser.ConfigParser(
@@ -126,53 +126,54 @@ def audit(path):
         cp.read_string(text)
         g = dict(cp.items("general"))
     except (configparser.Error, ValueError) as e:
-        rep["errors"].append("metadata.txt не читается строгим разбором "
-                             "каталога: %s" % str(e).splitlines()[0])
+        rep["errors"].append("metadata.txt fails the strict parsing the "
+                             "repository does: %s" % str(e).splitlines()[0])
         raw = configparser.RawConfigParser()
         raw.optionxform = str
         raw.read_string(text)
         g = dict(raw.items("general"))
     for k in REQUIRED:
         if not g.get(k, "").strip():
-            rep["errors"].append("в metadata.txt нет обязательного поля %s"
+            rep["errors"].append("metadata.txt has no required field %s"
                                  % k)
     for k in RECOMMENDED:
         if not g.get(k, "").strip():
-            rep["warnings"].append("в metadata.txt нет поля %s" % k)
-    rep["info"].append("версия %s, QGIS %s - %s, experimental=%s" % (
+            rep["warnings"].append("metadata.txt has no field %s" % k)
+    rep["info"].append("version %s, QGIS %s - %s, experimental=%s" % (
         g.get("version"), g.get("qgisMinimumVersion"),
-        g.get("qgisMaximumVersion", "(не задан)"), g.get("experimental")))
+        g.get("qgisMaximumVersion", "(not set)"), g.get("experimental")))
     qmax = g.get("qgisMaximumVersion", "").strip()
     qmin = g.get("qgisMinimumVersion", "").strip()
     top = qmax or (qmin[:1] + ".99")
     if top and int(top.split(".")[0] or 0) < 4:
-        rep["errors"].append("верхняя граница QGIS %s: в QGIS 4 модуль не "
-                             "виден ни в каталоге, ни в реестре" % top)
+        rep["errors"].append("QGIS upper bound %s: in QGIS 4 the plugin is "
+                             "hidden, both in the repository and locally"
+                             % top)
     if g.get("experimental", "").strip().lower() == "true":
-        rep["warnings"].append("experimental=True: модуль виден только при "
-                               "галке экспериментальных модулей")
+        rep["warnings"].append("experimental=True: the plugin shows up only "
+                               "with experimental plugins enabled")
     for k in ("repository", "tracker", "homepage"):
         v = g.get(k, "")
         if v and "github.com" not in v and k != "homepage":
-            rep["warnings"].append("%s=%s - каталог ждёт адрес кода и "
-                                   "трекера" % (k, v))
+            rep["warnings"].append("%s=%s - the repository expects the code "
+                                   "and tracker address" % (k, v))
     if "changelog" not in g:
-        rep["warnings"].append("нет changelog в metadata.txt")
+        rep["warnings"].append("no changelog in metadata.txt")
     icon = g.get("icon", "").strip()
     if icon and root + "/" + icon not in names:
-        rep["errors"].append("значок %s не найден в архиве" % icon)
+        rep["errors"].append("icon %s is not in the archive" % icon)
     if root + "/LICENSE" not in names and not any(
             n.lower().startswith((root + "/license").lower())
             for n in names):
-        rep["warnings"].append("нет файла LICENSE (каталог требует)")
+        rep["warnings"].append("no LICENSE file (the repository needs one)")
     junk = sorted({n for n in names for p in JUNK if re.search(p, n)})
     if junk:
-        rep["errors"].append("мусор в архиве (%d): %s" % (
+        rep["errors"].append("junk in the archive (%d): %s" % (
             len(junk), ", ".join(junk[:5]) + (" …" if len(junk) > 5 else "")))
     tests = [n for n in names if re.match(r"[^/]+/tests?/", n)]
     if tests:
-        rep["warnings"].append("папка tests в архиве (%d файлов): в "
-                               "выгрузку для каталога не кладётся"
+        rep["warnings"].append("tests folder in the archive (%d files): it "
+                               "does not belong in the upload build"
                                % len(tests))
     for n in names:
         if not n.endswith(".py") or "/tests/" in n or "/test/" in n:
@@ -183,14 +184,14 @@ def audit(path):
         for pat, why in SCANNER:
             ls = _lines(code, pat, nosec)
             if ls:
-                rep["errors"].append("%s: %s, строки %s" % (
+                rep["errors"].append("%s: %s, lines %s" % (
                     n, why, ls[:6]))
         for pat, why in QT6:
             if "QAction" in why and qaction_fallback:
                 continue
             ls = _lines(code, pat)
             if ls:
-                rep["qt6"].append("%s: %s, мест %d (строки %s)" % (
+                rep["qt6"].append("%s: %s, places %d (lines %s)" % (
                     n, why, len(ls), ls[:6]))
     return rep
 
@@ -200,9 +201,9 @@ def main(paths):
         r = audit(p)
         print("=" * 70)
         print(r["path"])
-        for key, title in (("info", "сведения"), ("errors", "ошибки"),
-                           ("warnings", "замечания"),
-                           ("qt6", "Qt6, посмотреть")):
+        for key, title in (("info", "info"), ("errors", "errors"),
+                           ("warnings", "warnings"),
+                           ("qt6", "Qt6, review")):
             if r[key]:
                 print("  %s:" % title)
                 for x in r[key]:

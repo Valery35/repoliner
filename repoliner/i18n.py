@@ -1,26 +1,28 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-"""Двуязычие интерфейса (RU/EN).
+"""A bilingual interface (RU/EN).
 
-Простой словарный слой: исходные строки в коде - русские, при английской
-локали QGIS они подменяются на английские по таблице TRANSLATIONS. Если
-перевода нет, возвращается исходная (русская) строка - модуль остаётся
-рабочим. Модуль не импортирует QGIS на верхнем уровне, поэтому таблицу
-переводов можно проверять обычным Python (см. tests/test_i18n.py).
+A simple dictionary layer: the source strings in the code are Russian,
+and under an English QGIS locale they are substituted with English ones
+by the TRANSLATIONS table. If there is no translation, the source
+(Russian) string is returned - the plugin stays working. The module does
+not import QGIS at the top level, so the translation table can be
+checked with plain Python (see tests/test_i18n.py).
 
-Язык определяется по настройкам QGIS один раз, лениво, при первом вызове tr().
-Для тестов и принудительного переключения есть set_language().
+The language is determined from the QGIS settings once, lazily, on the
+first call of tr(). For tests and for forced switching there is
+set_language().
 """
 
-_LANG = None  # 'ru' | 'en' (None = ещё не определён)
+_LANG = None  # 'ru' | 'en' (None = not determined yet)
 
 
 def set_language(lang):
-    """Принудительно задать язык ('ru'/'en'/'en_US'/...). None - сбросить."""
+    """Force the language ('ru'/'en'/'en_US'/...). None - reset it."""
     global _LANG
     if lang is None:
         _LANG = None
@@ -30,14 +32,17 @@ def set_language(lang):
 
 
 def language():
-    """Текущий язык ('ru'/'en'); инициализирует по QGIS при необходимости."""
+    """The current language ('ru'/'en'); initialises from QGIS if needed."""
     if _LANG is None:
         init_from_qgis()
     return _LANG or "en"
 
 
 def init_from_qgis():
-    """Определить язык интерфейса по настройкам QGIS. По умолчанию 'en'."""
+    """Determine the interface language from the QGIS settings.
+
+    The default is 'en'.
+    """
     loc = ""
     try:
         from qgis.core import QgsApplication
@@ -57,7 +62,10 @@ def init_from_qgis():
 
 
 def tr(s):
-    """Перевести строку s на активный язык. RU - исходник, EN - по таблице."""
+    """Translate the string s into the active language.
+
+    RU is the source, EN comes from the table.
+    """
     if _LANG is None:
         init_from_qgis()
     if _LANG == "en":
@@ -66,16 +74,17 @@ def tr(s):
 
 
 def missing_keys(keys):
-    """Какие из переданных русских строк не имеют английского перевода.
+    """Which of the given Russian strings have no English translation.
 
-    Удобно для теста покрытия: keys - множество строк, реально обёрнутых в
-    _tr()/tr() в коде (извлекается AST-обходом)."""
+    Handy for a coverage test: keys is the set of strings actually
+    wrapped in _tr()/tr() in the code (extracted by an AST walk)."""
     return [k for k in keys if k not in TRANSLATIONS]
 
 
-# --- Таблица переводов RU -> EN -------------------------------------------
-# Ключ - русская строка ровно как в коде, значение - английский перевод.
-# Сообщения ядра (core.py) о нечитаемых архивах и реестрах не переводятся.
+# --- RU -> EN translation table -------------------------------------------
+# The key is the Russian string exactly as in the code, the value is its
+# English translation. The core (core.py) messages about unreadable
+# archives and registries are not translated.
 
 TRANSLATIONS = {
     'Репозитории модулей…': 'Plugin repositories…',
@@ -146,4 +155,77 @@ TRANSLATIONS = {
     'Адрес не изменён: %s': 'Address not changed: %s',
     'Адреса архивов переписаны. Реестр не сохранён.': 'Archive addresses rewritten. The registry is not saved.',
     'есть в «%s» (%s), QGIS может показать ту версию': 'also in “%s” (%s), QGIS may show that version',
+}
+
+
+def error_text(exc):
+    """Text of a core error (core.RepoError) in the active language.
+
+    The core raises English templates and keeps their values, so the
+    message can be rendered in Russian without a second set of strings
+    in the core.
+    """
+    template = getattr(exc, "template", None)
+    if template is None:
+        return str(exc)
+    if _LANG is None:
+        init_from_qgis()
+    text = MESSAGES.get(template, template) if _LANG == "ru" else template
+    # a nested error (the XML parser inside a registry error) is
+    # rendered in the same language
+    values = tuple(error_text(v) if hasattr(v, "template") else v
+                   for v in getattr(exc, "values", ()))
+    try:
+        return text % values if values else text
+    except (TypeError, ValueError):
+        return str(exc)
+
+
+def missing_messages(templates):
+    """Core templates that have no Russian text."""
+    return [t for t in templates if t not in MESSAGES]
+
+
+# --- Core messages EN -> RU ----------------------------------------------
+# The core (core.py) speaks English. These are the same messages in
+# Russian, keyed by the template exactly as the core raises it.
+
+MESSAGES = {
+    'The server address must start with http:// or https://, got %s': 'Адрес сервера должен начинаться с http:// или https://, получено %s',
+    'The server address contains a space: %s': 'В адресе сервера есть пробел: %s',
+    'Archive not found: %s': 'Архив не найден: %s',
+    'metadata.txt has no [general] section: %s': 'В metadata.txt нет раздела [general]: %s',
+    'metadata.txt has no qgisMinimumVersion: %s': 'В metadata.txt нет qgisMinimumVersion: %s',
+    'The registry file is larger than 5 MB': 'Файл реестра больше 5 МБ',
+    'The root element is “%s” and plugins was expected': 'Корневой элемент «%s», а ожидался plugins',
+    'The registry was not created by Repoliner. Only registries marked generator="%s" are opened': 'Реестр создан не модулем Repoliner. Открываются только реестры с меткой generator="%s"',
+    'The registry file is larger than 5 MB: %s': 'Файл реестра больше 5 МБ: %s',
+    'The registry file is not text: %s': 'Файл реестра не текстовый: %s',
+    'The file cannot be read as a zip: %s (%s)': 'Файл не читается как zip: %s (%s)',
+    'The archive holds no metadata.txt in a plugin folder: %s': 'В архиве нет metadata.txt в папке модуля: %s',
+    'The archive holds several folders with metadata.txt: %s': 'В архиве несколько папок с metadata.txt: %s',
+    'metadata.txt is larger than 1 MB: %s': 'metadata.txt больше 1 МБ: %s',
+    'metadata.txt was not parsed: %s (%s)': 'metadata.txt не разобран: %s (%s)',
+    'metadata.txt has no %s field: %s': 'В metadata.txt нет поля %s: %s',
+    'The server address is set and the registry file is not': 'Адрес сервера задан, а файл реестра нет',
+    'The archive lies outside the registry folder and is not reachable by the server address: %s': 'Архив лежит вне папки реестра и по адресу сервера недоступен: %s',
+    'No registry file is set': 'Не задан файл реестра',
+    'The registry file was not parsed: %s': 'Файл реестра не разобран: %s',
+    'The registry file is broken: %s': 'Файл реестра испорчен: %s',
+    'Plugin “%s” has neither file_name nor download_url': 'У модуля «%s» нет ни file_name, ни download_url',
+    'The address of plugin “%s” is neither file:/// nor the server address of the registry: %s': 'Адрес модуля «%s» это не file:/// и не адрес сервера реестра: %s',
+
+# --- Messages of the XML parser (xmlparse.py) ---------------------------
+    'The file breaks off inside an XML comment': 'Файл оборван внутри комментария XML',
+    'The file breaks off inside an XML declaration': 'Файл оборван внутри объявления XML',
+    'The file breaks off inside CDATA': 'Файл оборван внутри CDATA',
+    'The file declares XML entities. Such files are not read. Entity expansion is a known way to inflate parsing until the machine gives up': 'В файле объявлены сущности XML. Такие файлы не читаются, раскрытие сущностей это известный способ раздуть разбор до отказа машины',
+    'The file breaks off inside an XML tag': 'Файл оборван внутри тега XML',
+    'Extra closing XML tag: %s': 'Лишний закрывающий тег XML: %s',
+    'An XML tag is closed under another name, opened %s, closed %s': 'Тег XML закрыт не тем именем, открыт %s, закрыт %s',
+    'Empty XML tag name': 'Пустое имя тега XML',
+    'The file holds more than one root element': 'В файле больше одного корневого элемента',
+    'XML nesting is too deep': 'Слишком глубокая вложенность XML',
+    'The XML file breaks off, tag %s is not closed': 'Файл XML оборван, тег %s не закрыт',
+    'The file was not parsed as XML, it has no root element': 'Файл не разобран как XML, корневого элемента нет',
 }

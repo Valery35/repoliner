@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Регрессия против находок сканера безопасности каталога plugins.qgis.org.
+# Regression against findings of the plugins.qgis.org catalog security
+# scanner.
 #
-# Каталог прогоняет загруженную версию через сканер и блокирует находки.
-# Пойманное в июле 2026:
-#   - `.pytest_cache/CACHEDIR.TAG` принят за строку с высокой энтропией
-#     (закрыто в tests/test_package_hygiene.py);
-#   - `xml.etree.ElementTree` при чтении палитры Leapfrog: стандартный
-#     разборщик уязвим к раздутым сущностям и внешним ссылкам, а тянуть в
-#     плагин defusedxml нельзя, его нет в поставке QGIS.
+# The catalog runs the uploaded release through the scanner and blocks
+# findings. Caught in July 2026:
+#   - `.pytest_cache/CACHEDIR.TAG` taken for a high entropy string
+#     (closed in tests/test_package_hygiene.py);
+#   - `xml.etree.ElementTree` when reading a Leapfrog palette: the
+#     standard parser is vulnerable to blown up entities and external
+#     references, and defusedxml cannot be pulled into the plugin, it
+#     is not in the QGIS distribution.
 #
-# Этот тест держит исходники в стороне от конструкций, которые сканер
-# считает опасными. Дешевле поймать здесь, чем узнать из блокировки после
-# заливки.
+# This test keeps the sources away from constructs that the scanner
+# considers dangerous. It is cheaper to catch it here than to learn it
+# from a block after the upload.
 #     python repoliner/tests/test_scanner_rules.py
 import os
 import re
@@ -24,16 +26,16 @@ import sys
 
 PKG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
-# (шаблон, чем заменять) - только то, что каталог уже ловил или ловит по
-# документированным правилам сканера
+# (pattern, what to use instead) - only what the catalog has already
+# caught or catches by the documented scanner rules
 BANNED = (
     (r"\bimport\s+xml\b", "свой разбор без модулей xml"),
     (r"\bfrom\s+xml[\s.]", "свой разбор без модулей xml"),
     (r"\bElementTree\b", "свой разбор без модулей xml"),
     (r"\bminidom\b", "свой разбор без модулей xml"),
     (r"\bpyexpat\b", "свой разбор без модулей xml"),
-    # точка перед именем означает метод объекта: dlg.exec() это диалог Qt,
-    # а не встроенный exec, и запрещать его нечего
+    # a dot before the name means an object method: dlg.exec() is a Qt
+    # dialog, not the built-in exec, and there is nothing to ban there
     (r"(?<![\w.])eval\s*\(", "разбор без eval"),
     (r"(?<![\w.])exec\s*\(", "выполнение без exec"),
     (r"\bpickle\.loads?\s*\(", "формат без pickle"),
@@ -49,8 +51,8 @@ def _sources():
 
 
 def _code_only(text):
-    """Без строк-комментариев: в них конструкции упоминаются нарочно, чтобы
-    объяснить запрет."""
+    """Without comment lines: there the constructs are mentioned on
+    purpose, to explain the ban."""
     return "\n".join(ln for ln in text.splitlines()
                      if not ln.lstrip().startswith("#"))
 
@@ -77,7 +79,7 @@ def _run():
         except Exception as exc:  # noqa: BLE001
             bad += 1
             print("FAIL %s: %s" % (name, exc))
-    print("%d тестов, ошибок %d" % (len(fns), bad))
+    print("%d tests, %d failed" % (len(fns), bad))
     return 1 if bad else 0
 
 

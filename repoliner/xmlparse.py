@@ -1,25 +1,36 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Разбор XML своими силами.
+"""XML parsing done by our own means.
 
-Модули xml из стандартной библиотеки в модуль не берутся. Сканер каталога
-plugins.qgis.org блокирует их, потому что штатный разборщик поддаётся
-раздутым сущностям и внешним ссылкам, а defusedxml в поставке QGIS нет.
+The xml modules of the standard library are not taken into the plugin.
+The scanner of the plugins.qgis.org repository blocks them, because the
+standard parser gives in to bloated entities and external references,
+and defusedxml is not part of the QGIS distribution.
 
-Разборщик намеренно ограничен. Он раскрывает только пять встроенных
-сущностей и числовые ссылки, а объявление своих сущностей отвергает
-отказом. Приставка пространства имён у имени тега снимается.
+The parser is deliberately limited. It expands only the five built-in
+entities and numeric references, and a declaration of custom entities is
+rejected with a refusal. The namespace prefix of a tag name is stripped.
 
-Код перенесён из модуля Isoliner (landxml.py) без изменения поведения.
-Сторож запретов - tests/test_scanner_rules.py.
+The code is carried over from the Isoliner plugin (landxml.py) with no
+change of behaviour. The guard of these bans is
+tests/test_scanner_rules.py.
 """
 
 
 class XmlError(Exception):
-    """Текст не разобран как XML."""
+    """Same shape as core.RepoError: the message is a template plus its
+    values, so i18n can show it in another language."""
+
+    def __init__(self, template, *values):
+        self.template = template
+        self.values = values
+        Exception.__init__(self, template % values if values else template)
+
+
+    """The text was not parsed as XML."""
 
 
 _ENT = {"amp": "&", "lt": "<", "gt": ">", "quot": '"', "apos": "'"}
@@ -27,7 +38,7 @@ _MAX_DEPTH = 100
 
 
 class _El(object):
-    """Элемент дерева: имя, атрибуты, текст, дети."""
+    """A tree element: name, attributes, text, children."""
 
     __slots__ = ("tag", "attrib", "text", "children")
 
@@ -70,14 +81,15 @@ def _unescape(s):
             except (ValueError, OverflowError):
                 out.append(s[j:k + 1])
         else:
-            # чужая сущность не раскрывается: раскрывать нечем и незачем
+            # a foreign entity is not expanded: nothing to expand it
+            # with and no reason to
             out.append(s[j:k + 1])
         i = k + 1
     return "".join(out)
 
 
 def _attrs(chunk):
-    """Атрибуты из хвоста открывающего тега."""
+    """Attributes from the tail of an opening tag."""
     out, i, n = {}, 0, len(chunk)
     while i < n:
         while i < n and chunk[i] in " \t\r\n":
@@ -114,7 +126,7 @@ def _attrs(chunk):
 
 
 def parse(text):
-    """Дерево из текста. Отказ при объявлении сущностей и при обрыве."""
+    """A tree from text. Refusal on entity declarations and on a break."""
     root, stack, i, n = None, [], 0, len(text)
     while True:
         lt = text.find("<", i)
@@ -125,19 +137,19 @@ def parse(text):
         if text.startswith("<!--", lt):
             i = text.find("-->", lt)
             if i < 0:
-                raise XmlError("Файл оборван внутри комментария XML")
+                raise XmlError("The file breaks off inside an XML comment")
             i += 3
             continue
         if text.startswith("<?", lt):
             i = text.find("?>", lt)
             if i < 0:
-                raise XmlError("Файл оборван внутри объявления XML")
+                raise XmlError("The file breaks off inside an XML declaration")
             i += 2
             continue
         if text.startswith("<![CDATA[", lt):
             end = text.find("]]>", lt)
             if end < 0:
-                raise XmlError("Файл оборван внутри CDATA")
+                raise XmlError("The file breaks off inside CDATA")
             if stack:
                 stack[-1].text += text[lt + 9:end]
             i = end + 3
@@ -146,27 +158,26 @@ def parse(text):
             head = text[lt:lt + 200].upper()
             if "ENTITY" in head or "DOCTYPE" in head:
                 raise XmlError(
-                    "В файле объявлены сущности XML. Такие файлы не "
-                    "читаются: раскрытие сущностей это известный способ "
-                    "раздуть разбор до отказа машины")
+                    "The file declares XML entities. Such files are not "
+                    "read. Entity expansion is a known way to inflate "
+                    "parsing until the machine gives up")
             i = text.find(">", lt)
             if i < 0:
-                raise XmlError("Файл оборван внутри объявления XML")
+                raise XmlError("The file breaks off inside an XML declaration")
             i += 1
             continue
         gt = text.find(">", lt)
         if gt < 0:
-            raise XmlError("Файл оборван внутри тега XML")
+            raise XmlError("The file breaks off inside an XML tag")
         body = text[lt + 1:gt]
         if body.startswith("/"):
             name = body[1:].strip().split(":")[-1]
             if not stack:
-                raise XmlError("Лишний закрывающий тег XML: %s" % name)
+                raise XmlError("Extra closing XML tag: %s", name)
             el = stack.pop()
             if el.tag != name:
-                raise XmlError(
-                    "Тег XML закрыт не тем именем: открыт %s, закрыт %s"
-                    % (el.tag, name))
+                raise XmlError("An XML tag is closed under another name, "
+                               "opened %s, closed %s", el.tag, name)
             i = gt + 1
             continue
         selfclose = body.endswith("/")
@@ -177,22 +188,23 @@ def parse(text):
             sp += 1
         name = body[:sp].strip().split(":")[-1]
         if not name:
-            raise XmlError("Пустое имя тега XML")
+            raise XmlError("Empty XML tag name")
         el = _El(name, _attrs(body[sp:]))
         if stack:
             stack[-1].children.append(el)
         elif root is None:
             root = el
         else:
-            raise XmlError("В файле больше одного корневого элемента")
+            raise XmlError("The file holds more than one root element")
         if not selfclose:
             stack.append(el)
             if len(stack) > _MAX_DEPTH:
-                raise XmlError("Слишком глубокая вложенность XML")
+                raise XmlError("XML nesting is too deep")
         i = gt + 1
     if stack:
-        raise XmlError(
-            "Файл XML оборван: тег %s не закрыт" % stack[-1].tag)
+        raise XmlError("The XML file breaks off, tag %s is not closed",
+                       stack[-1].tag)
     if root is None:
-        raise XmlError("Файл не разобран как XML: корневого элемента нет")
+        raise XmlError("The file was not parsed as XML, it has no root "
+                       "element")
     return root

@@ -1,33 +1,55 @@
-# Repoliner - репозитории модулей QGIS
+# Repoliner - QGIS plugin repositories
 
-Мы создаём программы для горно-геологических служб калийных рудников.
-Repoliner собирает репозиторий модулей QGIS из готовых zip-архивов.
+[Русская версия](README_ru.md)
 
-## Что делает
+We build software for the geological and surveying services of potash
+mines. Repoliner builds a QGIS plugin repository from ready-made plugin
+zip archives.
 
-- Выбираются архивы модулей. Из `metadata.txt` каждого архива берутся
-  название, версия, описание и диапазон версий QGIS.
-- Модуль записывается в `plugins.xml` в формате репозитория модулей
-  QGIS. Адрес архива указывает на его место на диске (`file:///`).
-- Окно держит несколько репозиториев, в каждом свой набор модулей.
-  У каждого модуля видно, на месте ли архив и совпадает ли его версия
-  с реестром.
-- Кнопка **Подключить в QGIS** добавляет реестр в менеджер модулей, и
-  модули реестра ставятся оттуда. Кнопка **Копировать адрес** даёт тот
-  же адрес для ручного ввода на другой машине.
-- Реестр может лежать на диске, в общей сетевой папке Windows или
-  раздаваться веб-сервером (кнопка **Адрес сервера**).
-- Если модуль с тем же именем пришёл в QGIS из другого репозитория,
-  окно показывает этот репозиторий и версию.
+## What it does
 
-Совместимость QGIS 3.16 - 4.99.
+- You select plugin archives. The name, version, description and the
+  range of QGIS versions are taken from `metadata.txt` of each archive.
+- Each plugin is written to `plugins.xml` in the QGIS plugin repository
+  format. The archive address points to where the archive lies
+  (`file:///`), the archives are not copied.
+- The window keeps several repositories, each with its own set of
+  plugins. For every plugin it shows whether the archive is in place and
+  whether its version matches the registry, and whether QGIS of the
+  running version will list the plugin at all.
+- **Connect in QGIS** adds the registry to the QGIS plugin manager, and
+  the plugins of the registry are installed from there. **Copy address**
+  gives the same address for another machine.
+- A registry can lie on a disk, in a shared Windows folder
+  (`\\server\share`) or be served by a web server (**Server address**).
+- If QGIS received a plugin with the same name from another repository,
+  such as the official catalogue, the window shows that repository and
+  its version.
 
-## Изменения
+The archive file may have any name. The plugin name in the registry is
+taken from the plugin folder inside the archive, because QGIS installs
+only the folder with that name.
 
-- **0.1.4** - первая версия в каталоге модулей QGIS, пометка «экспериментальный» снята.
-- **0.1.3** - предупреждение о модуле из другого репозитория без повторов и без случаев с той же версией.
-- **0.1.2** - подключение реестра в QGIS одной кнопкой, адрес веб-сервера, сетевые папки, предупреждение о модулях из других репозиториев.
-- **0.1.1** - модули из архивов с произвольным именем файла ставятся из реестра.
-- **0.1.0** - первая версия.
+Open the window from **Plugins - Repoliner - Plugin repositories…** or
+from the Repoliner toolbar.
 
-Разработано ООО «Информ++» (www.informpp.ru). Лицензия GPL-2.0-or-later.
+Compatible with QGIS 3.16 - 4.99. The interface is in English and
+Russian.
+
+## Changes
+
+- **0.1.6** - a file that is not text, picked as a registry, gives a message instead of an error window.
+- **0.1.5** - the repository is in English, the messages of the core follow the language of the QGIS interface.
+
+- **0.1.4** - first release in the QGIS plugin catalogue, the
+  experimental flag is removed.
+- **0.1.3** - the warning about a plugin from another repository has no
+  repeats and is not shown for the same version.
+- **0.1.2** - one-button connection of a registry to QGIS, web server
+  address, shared Windows folders, warning about plugins from other
+  repositories.
+- **0.1.1** - plugins from archives with any file name install from the
+  registry.
+- **0.1.0** - first version.
+
+Developed by Inform++ LLC (www.informpp.ru). License GPL-2.0-or-later.

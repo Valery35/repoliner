@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-"""Реестр модулей QGIS из zip-архивов, без QGIS.
+"""QGIS plugin registry from zip archives, without QGIS.
 
-Проверяется то, от чего зависит, увидит ли QGIS модуль вообще:
-- адрес архива полный, file:///, пробелы закодированы. Относительный
-  адрес QGIS не разрешает;
-- имя модуля в реестре (file_name) берётся по папке внутри архива, а
-  не по имени файла. QGIS после скачивания ищет в архиве папку с этим
-  именем, и на topoliner_upload.zip с папкой topoliner установка
-  обрывалась. Архив с той же папкой заменяет запись, а не дублирует её;
-- записанный реестр читается обратно без потерь;
-- чужой реестр и файл с объявлением сущностей не читаются.
+What is checked is what decides whether QGIS sees the plugin at all:
+- the archive address is absolute, file:///, spaces are encoded. QGIS
+  does not resolve a relative address;
+- the plugin name in the registry (file_name) is taken from the folder
+  inside the archive, not from the file name. After the download QGIS
+  looks in the archive for a folder with that name, and on
+  topoliner_upload.zip with the folder topoliner the installation
+  broke off. An archive with the same folder replaces the entry
+  instead of duplicating it;
+- the written registry reads back without loss;
+- a foreign registry and a file with an entity declaration are not
+  read.
 
-Запуск:  python repoliner/tests/test_core.py
+Run:  python repoliner/tests/test_core.py
 """
 import os
 import shutil
@@ -94,11 +97,11 @@ def test_two_archives_make_two_entries():
         assert "<experimental>True</experimental>" in text
         assert "<author_name>ООО «Информ++»</author_name>" in text
         assert "<qgis_minimum_version>3.16</qgis_minimum_version>" in text
-        # не переносятся
+        # not carried over
         for absent in ("secret@example.com", "changelog", "<icon>",
                        "<email>"):
             assert absent not in text, absent
-        # экранирование
+        # escaping
         assert "&amp; проверка &lt;тегов&gt;" in text
 
 
@@ -108,7 +111,7 @@ def test_download_url_is_absolute_file_url():
         e = pr.entry_from_archive(a)
         url = e.download_url
         assert url.startswith("file:///"), url
-        assert " " not in url, url               # пробел в пути закодирован
+        assert " " not in url, url               # space in path is encoded
         assert url.endswith("/alpha.zip"), url
         assert os.path.samefile(e.archive_path, a)
 
@@ -153,7 +156,8 @@ def test_same_archive_name_replaces_entry():
 
 
 def test_file_name_follows_folder_not_archive_name():
-    """Файл выбирает пользователь, имя модуля даёт папка внутри."""
+    """The user picks the file, the folder inside gives the plugin
+    name."""
     with _Tmp() as d:
         p = make_zip(d, "topoliner_upload.zip", "topoliner", "Topoliner",
                      "0.12.7")
@@ -162,7 +166,7 @@ def test_file_name_follows_folder_not_archive_name():
         assert e.key == "topoliner"
         assert e.download_url.endswith("/topoliner_upload.zip")
         assert e.status() == pr.ST_OK
-        # тот же модуль под другим именем файла заменяет запись
+        # the same plugin under another file name replaces the entry
         repo = pr.Repository()
         repo.add_archives([p, make_zip(d, "topoliner.zip", "topoliner",
                                        "Topoliner", "0.12.8")])
@@ -171,7 +175,8 @@ def test_file_name_follows_folder_not_archive_name():
 
 
 def test_old_registry_with_file_name_by_archive_is_flagged():
-    """Реестр 0.1.0 писал file_name по имени файла, QGIS такой не ставит."""
+    """Registry 0.1.0 wrote file_name from the file name, QGIS does
+    not install such a plugin."""
     with _Tmp() as d:
         p = make_zip(d, "topoliner_upload.zip", "topoliner", "Topoliner",
                      "0.12.7")
@@ -267,7 +272,7 @@ def test_foreign_and_hostile_files_refused():
         pr.loads("<plugins generator='Repoliner'>" + " " * pr.MAX_XML_BYTES
                  + "</plugins>")
     except pr.RepoError as e:
-        assert "5 МБ" in str(e)
+        assert "larger than 5 MB" in str(e)
     else:
         raise AssertionError("предел размера не сработал")
 
@@ -290,6 +295,26 @@ def test_bad_archives_reported_not_raised():
         assert repo.entries == [] and not repo.dirty
 
 
+def test_binary_file_is_refused_as_registry():
+    """A file that is not text must give a RepoError, not a decoding
+    error.
+
+    Live check on QGIS 4.0.3: a zip passed to load() raised
+    UnicodeDecodeError, which the window does not catch, so the user got
+    a traceback instead of a message.
+    """
+    with _Tmp() as d:
+        p = os.path.join(d, "binary.xml")
+        with open(p, "wb") as f:
+            f.write(b"PK\x03\x04\xfa\xfb\xfc\xfd")
+        try:
+            pr.load(p)
+        except pr.RepoError as e:
+            assert "not text" in str(e), e
+        else:
+            raise AssertionError("a binary file was read as a registry")
+
+
 def test_new_registry_is_empty_and_own():
     with _Tmp() as d:
         path = os.path.join(d, "plugins.xml")
@@ -301,8 +326,8 @@ def test_new_registry_is_empty_and_own():
 def test_unc_and_drive_paths_make_standard_urls():
     assert pr.path_to_url("\\\\srv\\share\\Мод ули\\a.zip") == \
         "file://srv/share/%D0%9C%D0%BE%D0%B4%20%D1%83%D0%BB%D0%B8/a.zip"
-    # проверено на QGIS 4.0.3: file://localhost/C%24/… не открывается,
-    # file://127.0.0.1/C%24/… открывается
+    # checked on QGIS 4.0.3: file://localhost/C%24/… does not open,
+    # file://127.0.0.1/C%24/… does open
     assert pr.path_to_url("\\\\localhost\\C$\\x.zip") == \
         "file://127.0.0.1/C%24/x.zip"
     assert pr.path_to_url("C:\\Dev\\a b\\x.zip") == \
@@ -314,7 +339,8 @@ def test_unc_and_drive_paths_make_standard_urls():
 
 
 def _served_repo(d):
-    """Реестр в папке d с архивами в подпапке «модули», адрес сервера."""
+    """Registry in folder d with archives in the subfolder «модули»,
+    server address."""
     arc = os.path.join(d, "модули")
     os.makedirs(arc)
     a = make_zip(arc, "alpha.zip", "alpha", "Alpha", "1.0.0")
@@ -338,13 +364,14 @@ def test_base_url_rewrites_addresses_and_back():
         assert repo.url == "http://srv:8080/plugins/plugins.xml"
         for e in repo.entries:
             assert repo.status(e) == pr.ST_OK, e.key
-            assert e.status() == pr.ST_REMOTE    # без реестра не проверить
+            # without the registry this cannot be checked
+            assert e.status() == pr.ST_REMOTE
         repo.save()
         back = pr.load(repo.path)
         assert back.base_url == "http://srv:8080/plugins/"
         assert back.dumps() == repo.dumps()
         assert [back.status(e) for e in back.entries] == [pr.ST_OK] * 2
-        # новый архив сразу получает адрес сервера
+        # a new archive gets the server address right away
         c = make_zip(os.path.join(d, "модули"), "gamma.zip", "gamma", "G",
                      "1")
         back.add_archives([c])
@@ -366,14 +393,14 @@ def test_base_url_refuses_archive_outside_folder():
         try:
             repo.set_base_url("https://srv/p/")
         except pr.RepoError as e:
-            assert "вне папки" in str(e)
+            assert "outside the registry folder" in str(e)
         else:
             raise AssertionError("архив вне папки принят")
         assert repo.dumps() == before and repo.base_url == ""
         repo.set_base_url("")
         added, _, errors = pr.Repository(repo.path, "https://srv/p/") \
             .add_archives([outside])
-        assert not added and "вне папки" in errors[0]
+        assert not added and "outside the registry folder" in str(errors[0])
         for bad in ("ftp://x/", "srv/p", "http://a b/"):
             try:
                 pr.check_base_url(bad)
@@ -383,8 +410,8 @@ def test_base_url_refuses_archive_outside_folder():
 
 
 def test_served_registry_downloads_over_http():
-    """Настоящий веб-сервер: реестр и архивы скачиваются по записанным
-    адресам, архив читается."""
+    """A real web server: the registry and the archives are downloaded
+    from the recorded addresses, and the archive is read."""
     import threading
     import urllib.request
     from functools import partial
@@ -427,7 +454,7 @@ def _run():
         except Exception as exc:  # noqa: BLE001
             bad += 1
             print("FAIL %s: %r" % (name, exc))
-    print("%d тестов, ошибок %d" % (len(fns), bad))
+    print("%d tests, %d failed" % (len(fns), bad))
     return 1 if bad else 0
 
 

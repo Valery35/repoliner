@@ -1,38 +1,42 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - repositories of QGIS plugins.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Реестр модулей QGIS (plugins.xml) из готовых zip-архивов.
+"""Registry of QGIS plugins (plugins.xml) from ready-made zip archives.
 
-Без QGIS и Qt: окно модуля только показывает то, что здесь посчитано.
-Тест `tests/test_core.py`.
+Without QGIS and Qt: the plugin window only shows what is computed
+here. Test `tests/test_core.py`.
 
-Один файл plugins.xml это один репозиторий: QGIS читает его по одному
-адресу. Набор репозиториев держит окно, в настройках QGIS.
+One plugins.xml file is one repository: QGIS reads it from a single
+address. The set of repositories is held by the window, in the QGIS
+settings.
 
-Как QGIS читает реестр (pyplugin_installer/installer_data.py, 3.40 и 4.x):
-- модуль определяется именем до первой точки из file_name, а без него из
-  download_url. Совпадение имён в двух репозиториях сливает записи в
-  одну;
-- после скачивания QGIS ищет в архиве папку с этим именем и копирует
-  только её. Поэтому file_name пишется по папке модуля внутри архива, а
-  не по имени файла. Сам файл может называться как угодно:
-  download_url ведёт на него, и скачивается он по этому адресу;
-- download_url берётся как есть и не разрешается относительно адреса
-  plugins.xml. Поэтому адрес пишется полный, для файла на диске это
-  file:///;
-- к адресу реестра QGIS дописывает ?qgis=X.Y, для file:/// это не мешает
-  (проверено на QGIS 4.0.3);
-- модуль вне диапазона qgis_minimum_version - qgis_maximum_version в
-  списке не показывается вовсе. Пустой максимум QGIS считает как
-  «старшая цифра минимума».99.
+How QGIS reads the registry (pyplugin_installer/installer_data.py, 3.40
+and 4.x):
+- the plugin is identified by the name up to the first dot from
+  file_name, and without it from download_url. Matching names in two
+  repositories merge the records into one;
+- after the download QGIS looks in the archive for a folder with this
+  name and copies only it. That is why file_name is written after the
+  plugin folder inside the archive, and not after the file name. The
+  file itself may be named in any way: download_url leads to it, and it
+  is downloaded from that address;
+- download_url is taken as is and is not resolved relative to the
+  address of plugins.xml. That is why the address is written in full,
+  for a file on disk this is file:///;
+- QGIS appends ?qgis=X.Y to the registry address, for file:/// this
+  does not get in the way (checked on QGIS 4.0.3);
+- a plugin outside the qgis_minimum_version - qgis_maximum_version
+  range is not shown in the list at all. An empty maximum is treated by
+  QGIS as "the leading digit of the minimum".99.
 
-Соответствие полей metadata.txt и plugins.xml (FIELD_MAP ниже):
+Correspondence of the metadata.txt and plugins.xml fields (FIELD_MAP
+below):
 
     metadata.txt          plugins.xml
-    name                  атрибут name
-    version               атрибут version и элемент version
+    name                  name attribute
+    version               version attribute and version element
     description           description
     about                 about
     qgisMinimumVersion    qgis_minimum_version
@@ -46,18 +50,19 @@
     deprecated            deprecated (True/False)
     plugin_dependencies   plugin_dependencies
     server                server (True/False)
-    -                     file_name = папка модуля в архиве + .zip
-    -                     download_url = file:/// на архив
-    -                     update_date = время изменения архива
+    -                     file_name = plugin folder in archive + .zip
+    -                     download_url = file:/// to the archive
+    -                     update_date = modification time of the archive
 
-Не переносятся: email (каталог его не публикует), changelog (в metadata
-он длинный, QGIS показывает его из установленного модуля), icon (для
-file:/// QGIS относительный путь значка не разрешает), category,
-hasProcessingProvider.
+Not carried over: email (the catalog does not publish it), changelog
+(in metadata it is long, QGIS shows it from the installed plugin), icon
+(for file:/// QGIS does not resolve the relative path of the icon),
+category, hasProcessingProvider.
 
-Модули xml стандартной библиотеки не берутся: сканер каталога
-plugins.qgis.org их блокирует. Разбор идёт своим разборщиком
-(xmlparse.py), он отказывается читать файлы с объявлением сущностей.
+The xml modules of the standard library are not used: the scanner of
+the plugins.qgis.org catalog blocks them. Parsing is done by our own
+parser (xmlparse.py), it refuses to read files with entity
+declarations.
 """
 
 import configparser
@@ -75,7 +80,7 @@ GENERATOR = "Repoliner"
 MAX_XML_BYTES = 5 * 1024 * 1024
 MAX_METADATA_BYTES = 1024 * 1024
 
-# (поле metadata.txt, элемент plugins.xml, логический флаг)
+# (metadata.txt field, plugins.xml element, boolean flag)
 FIELD_MAP = (
     ("description", "description", False),
     ("about", "about", False),
@@ -92,22 +97,32 @@ FIELD_MAP = (
     ("server", "server", True),
 )
 
-# порядок элементов при записи, как в каталоге
+# order of the elements when writing, as in the catalog
 ELEMENT_ORDER = ("description", "about", "version", "qgis_minimum_version",
                  "qgis_maximum_version", "homepage", "tracker", "repository",
                  "tags", "author_name", "file_name", "download_url",
                  "update_date", "experimental", "deprecated",
                  "plugin_dependencies", "server")
 
-# состояния записи относительно архива на диске
+# states of the record relative to the archive on disk
 ST_OK = "ok"
-ST_MISSING = "missing"          # архива по адресу нет
-ST_CHANGED = "changed"          # архив не совпадает с записью реестра
-ST_REMOTE = "remote"            # адрес не file:///, архив не проверяется
+ST_MISSING = "missing"          # no archive at the address
+ST_CHANGED = "changed"          # archive does not match the registry record
+ST_REMOTE = "remote"            # address is not file:///, archive unchecked
 
 
 class RepoError(Exception):
-    """Архив или реестр не читается. Текст годится для показа."""
+    """An archive or a registry cannot be read. The text is meant to be
+    shown to the user.
+
+    The message is kept as a template plus its values, so the same
+    message can be rendered in another language, see i18n.error_text.
+    """
+
+    def __init__(self, template, *values):
+        self.template = template
+        self.values = values
+        Exception.__init__(self, template % values if values else template)
 
 
 def _flag(value):
@@ -116,20 +131,22 @@ def _flag(value):
 
 
 def plugin_key(file_name):
-    """Имя модуля так, как его видит QGIS: имя архива до первой точки."""
+    """Plugin name as QGIS sees it: archive name up to the first dot."""
     return os.path.basename(file_name).partition(".")[0]
 
 
 def path_to_url(path):
-    """Полный адрес file:/// для файла на диске, с кодированием пробелов.
+    """Full file:/// address for a file on disk, with spaces encoded.
 
-    Путь сетевой папки \\\\server\\share\\x.zip даёт file://server/share/x.zip,
-    путь с буквой диска C:\\x.zip даёт file:///C:/x.zip.
+    The network folder path \\\\server\\share\\x.zip gives
+    file://server/share/x.zip, the path with a drive letter C:\\x.zip
+    gives file:///C:/x.zip.
     """
     p = str(path).replace("\\", "/")
     if p.startswith("//"):
-        # Qt считает file://localhost/ локальным диском и ищет /C$/…,
-        # поэтому имя этой же машины заменяется адресом 127.0.0.1
+        # Qt treats file://localhost/ as a local disk and looks for
+        # /C$/…, so the name of this same machine is replaced by the
+        # address 127.0.0.1
         if p[2:].lower().startswith("localhost/"):
             p = "//127.0.0.1/" + p[len("//localhost/"):]
         return "file:" + quote(p, safe="/:")
@@ -142,20 +159,21 @@ def path_to_url(path):
 
 
 def check_base_url(url):
-    """Адрес сервера для реестра: пусто или http(s)://…/ с косой в конце."""
+    """Server address for the registry: empty or http(s)://…/ with a
+    trailing slash."""
     url = (url or "").strip()
     if not url:
         return ""
     if not re.match(r"^https?://[^/\s]+", url, re.I):
-        raise RepoError("Адрес сервера должен начинаться с http:// или "
-                        "https://: %s" % url)
+        raise RepoError("The server address must start with http:// or "
+                        "https://, got %s", url)
     if any(c.isspace() for c in url):
-        raise RepoError("В адресе сервера есть пробел: %s" % url)
+        raise RepoError("The server address contains a space: %s", url)
     return url.rstrip("/") + "/"
 
 
 def url_to_path(url):
-    """Путь на диске из file:///, иначе None."""
+    """Path on disk from file:///, otherwise None."""
     parts = urlsplit(url or "")
     if parts.scheme.lower() != "file":
         return None
@@ -167,49 +185,50 @@ def url_to_path(url):
     return os.path.normpath(p)
 
 
-# --- архив --------------------------------------------------------------
+# --- archive ------------------------------------------------------------
 
 def read_archive(path):
-    """Сведения из metadata.txt архива модуля.
+    """Information from the metadata.txt of a plugin archive.
 
-    Возвращает словарь: key и folder (папка модуля в архиве), file_name
-    (имя для реестра, по папке), archive (имя файла), fields (поля
-    metadata.txt как есть). Отказ, если архив не zip, в нём нет metadata.txt в
-    корневой папке модуля или нет name и version.
+    Returns a dictionary: key and folder (the plugin folder in the
+    archive), file_name (the name for the registry, after the folder),
+    archive (the file name), fields (the metadata.txt fields as is).
+    Refuses if the archive is not a zip, if it holds no metadata.txt in
+    the root plugin folder or if there is no name and version.
     """
     if not os.path.isfile(path):
-        raise RepoError("Архив не найден: %s" % path)
+        raise RepoError("Archive not found: %s", path)
     try:
         zf = zipfile.ZipFile(path)
     except (zipfile.BadZipfile, OSError) as e:
-        raise RepoError("Файл не читается как zip: %s (%s)" % (path, e))
+        raise RepoError("The file cannot be read as a zip: %s (%s)", path, e)
     with zf:
         names = [n for n in zf.namelist() if n.count("/") == 1
                  and n.split("/")[1].lower() == "metadata.txt"]
         if not names:
-            raise RepoError(
-                "В архиве нет metadata.txt в папке модуля: %s" % path)
+            raise RepoError("The archive holds no metadata.txt in a plugin "
+                            "folder: %s", path)
         if len(names) > 1:
-            raise RepoError(
-                "В архиве несколько папок с metadata.txt: %s" % path)
+            raise RepoError("The archive holds several folders with "
+                            "metadata.txt: %s", path)
         info = zf.getinfo(names[0])
         if info.file_size > MAX_METADATA_BYTES:
-            raise RepoError("metadata.txt больше 1 МБ: %s" % path)
+            raise RepoError("metadata.txt is larger than 1 MB: %s", path)
         raw = zf.read(names[0])
     text = raw.decode("utf-8-sig", errors="replace")
     parser = configparser.RawConfigParser(strict=False)
     try:
         parser.read_file(io.StringIO(text))
     except configparser.Error as e:
-        raise RepoError("metadata.txt не разобран: %s (%s)" % (path, e))
+        raise RepoError("metadata.txt was not parsed: %s (%s)", path, e)
     if not parser.has_section("general"):
-        raise RepoError("В metadata.txt нет раздела [general]: %s" % path)
+        raise RepoError("metadata.txt has no [general] section: %s", path)
     fields = dict((k, v.strip()) for k, v in parser.items("general"))
-    # RawConfigParser приводит ключи к нижнему регистру
+    # RawConfigParser lowercases the keys
     lower = dict((k.lower(), v) for k, v in fields.items())
     for need in ("name", "version"):
         if not lower.get(need):
-            raise RepoError("В metadata.txt нет поля %s: %s" % (need, path))
+            raise RepoError("metadata.txt has no %s field: %s", need, path)
     folder = names[0].split("/")[0]
     return {"key": folder,
             "folder": folder,
@@ -219,7 +238,8 @@ def read_archive(path):
 
 
 def entry_from_archive(path, url=None):
-    """Запись реестра из архива. url по умолчанию file:/// на архив."""
+    """Registry record from an archive. url is by default file:/// to
+    the archive."""
     arc = read_archive(path)
     f = arc["fields"]
     e = PluginEntry(f["name"], f["version"])
@@ -231,7 +251,7 @@ def entry_from_archive(path, url=None):
             e.elements[elem] = " ".join(v.split()) \
                 if elem != "about" else v
     if not e.elements.get("qgis_minimum_version"):
-        raise RepoError("В metadata.txt нет qgisMinimumVersion: %s" % path)
+        raise RepoError("metadata.txt has no qgisMinimumVersion: %s", path)
     e.elements["file_name"] = arc["file_name"]
     e.elements["download_url"] = url or path_to_url(path)
     e.elements["update_date"] = time.strftime(
@@ -240,17 +260,17 @@ def entry_from_archive(path, url=None):
     return e
 
 
-# --- запись реестра -----------------------------------------------------
+# --- registry record ----------------------------------------------------
 
 class PluginEntry(object):
-    """Один pyqgis_plugin: имя, версия и элементы в виде строк."""
+    """One pyqgis_plugin: name, version and elements as strings."""
 
     def __init__(self, name, version, elements=None):
         self.name = name
         self.version = version
         self.elements = dict(elements or {})
         self.elements["version"] = version
-        self.folder = None           # папка модуля в архиве, если читали
+        self.folder = None           # plugin folder in archive, if read
 
     @property
     def file_name(self):
@@ -276,14 +296,16 @@ class PluginEntry(object):
         return lo, hi
 
     def is_compatible(self, qgis_version):
-        """Покажет ли QGIS этой версии модуль в списке (как isCompatible)."""
+        """Whether QGIS of this version shows the plugin in the list
+        (like isCompatible)."""
         cur = _vtuple(qgis_version)[:2]
         lo, hi = self.qgis_range
         return _vtuple(lo)[:2] <= cur <= _vtuple(hi)[:2]
 
     def status(self, path=None):
-        """Состояние относительно архива: ST_OK, ST_MISSING, ST_CHANGED,
-        ST_REMOTE. path - архив на диске, если адрес не file:///."""
+        """State relative to the archive: ST_OK, ST_MISSING, ST_CHANGED,
+        ST_REMOTE. path - the archive on disk, if the address is not
+        file:///."""
         p = path or self.archive_path
         if p is None:
             return ST_REMOTE
@@ -296,12 +318,12 @@ class PluginEntry(object):
         if arc["fields"].get("version") != self.version:
             return ST_CHANGED
         if arc["key"] != self.key:
-            return ST_CHANGED       # QGIS не найдёт папку модуля
+            return ST_CHANGED       # QGIS will not find the plugin folder
         return ST_OK
 
 
 def version_key(v):
-    """Ключ сравнения версий: «1.10.0» старше «1.9.2»."""
+    """Version comparison key: "1.10.0" is newer than "1.9.2"."""
     return _vtuple(v)
 
 
@@ -321,37 +343,40 @@ def _esc(s):
 
 
 class Repository(object):
-    """Реестр одного репозитория: путь к plugins.xml и записи модулей."""
+    """Registry of one repository: path to plugins.xml and the plugin
+    records."""
 
     def __init__(self, path=None, base_url=""):
         self.path = path
-        self.base_url = base_url     # http(s)://…/, пусто - адреса file:///
+        self.base_url = base_url     # http(s)://…/, empty - file:/// urls
         self.entries = []
         self.dirty = False
 
-    # адреса
+    # addresses
     @property
     def folder(self):
         return os.path.dirname(os.path.abspath(self.path)) if self.path \
             else ""
 
     def url_for(self, archive):
-        """Адрес архива в реестре: file:/// или адрес сервера + путь от
-        папки реестра."""
+        """Address of the archive in the registry: file:/// or the
+        server address + the path from the registry folder."""
         if not self.base_url:
             return path_to_url(archive)
         if not self.path:
-            raise RepoError("Адрес сервера задан, а файл реестра нет")
+            raise RepoError("The server address is set and the registry "
+                            "file is not")
         rel = os.path.relpath(os.path.abspath(archive), self.folder)
         rel = rel.replace("\\", "/")
         if rel.startswith("../") or rel == ".." or os.path.isabs(rel):
-            raise RepoError(
-                "Архив лежит вне папки реестра и по адресу сервера "
-                "недоступен: %s" % archive)
+            raise RepoError("The archive lies outside the registry folder "
+                            "and is not reachable by the server address: %s",
+                            archive)
         return self.base_url + quote(rel, safe="/")
 
     def local_path(self, entry):
-        """Архив на диске для записи: из file:/// или из адреса сервера."""
+        """Archive on disk for a record: from file:/// or from the
+        server address."""
         p = entry.archive_path
         if p is not None:
             return p
@@ -365,19 +390,20 @@ class Repository(object):
         return entry.status(self.local_path(entry))
 
     def set_base_url(self, url):
-        """Сменить адрес сервера и переписать адреса всех архивов.
+        """Change the server address and rewrite the addresses of all
+        archives.
 
-        Отказ без изменений, если хоть один архив недоступен по новому
-        адресу."""
+        Refuses without changes if at least one archive is not
+        reachable by the new address."""
         url = check_base_url(url)
         old = self.base_url
         pairs = []
         for e in self.entries:
             p = self.local_path(e)
             if p is None:
-                raise RepoError("У модуля «%s» адрес не file:/// и не адрес "
-                                "сервера реестра: %s" % (e.name,
-                                                         e.download_url))
+                raise RepoError("The address of plugin “%s” is neither "
+                                "file:/// nor the server address of the "
+                                "registry: %s", e.name, e.download_url)
             pairs.append((e, p))
         self.base_url = url
         try:
@@ -390,7 +416,7 @@ class Repository(object):
         if url != old:
             self.dirty = True
 
-    # поиск и правка
+    # search and editing
     def find(self, key):
         for e in self.entries:
             if e.key == key:
@@ -398,9 +424,10 @@ class Repository(object):
         return None
 
     def put(self, entry):
-        """Добавить запись. Запись с тем же именем модуля заменяется.
+        """Add a record. A record with the same plugin name is
+        replaced.
 
-        Возвращает прежнюю запись или None.
+        Returns the previous record or None.
         """
         old = self.find(entry.key)
         if old is not None:
@@ -418,20 +445,23 @@ class Repository(object):
         return e
 
     def add_archives(self, paths):
-        """Добавить архивы. Возвращает (added, replaced, errors)."""
+        """Add archives. Returns (added, replaced, errors).
+
+        errors - a list of RepoError, so that the caller shows them in
+        its own language."""
         added, replaced, errors = [], [], []
         for p in paths:
             try:
                 e = entry_from_archive(p, url=self.url_for(p))
             except RepoError as exc:
-                errors.append(str(exc))
+                errors.append(exc)
                 continue
             old = self.put(e)
             (replaced if old is not None else added).append(e)
         return added, replaced, errors
 
     def refresh(self):
-        """Перечитать все архивы file:///. Возвращает (updated, errors)."""
+        """Reread all file:/// archives. Returns (updated, errors)."""
         updated, errors = [], []
         for e in list(self.entries):
             p = self.local_path(e)
@@ -440,12 +470,12 @@ class Repository(object):
             try:
                 fresh = entry_from_archive(p, url=e.download_url)
             except RepoError as exc:
-                errors.append(str(exc))
+                errors.append(exc)
                 continue
             if fresh.elements != e.elements or fresh.name != e.name:
-                # имя модуля могло смениться (реестр 0.1.0 брал его из
-                # имени файла), поэтому заменяется сама запись, а
-                # совпадение по новому имени снимается
+                # the plugin name could have changed (registry 0.1.0
+                # took it from the file name), so the record itself is
+                # replaced, and a match by the new name is removed
                 self.entries[self.entries.index(e)] = fresh
                 for other in [x for x in self.entries
                               if x is not fresh and x.key == fresh.key]:
@@ -454,7 +484,7 @@ class Repository(object):
                 updated.append(fresh)
         return updated, errors
 
-    # запись
+    # writing
     def dumps(self):
         lines = ['<?xml version="1.0" encoding="UTF-8"?>',
                  '<plugins generator="%s"%s>' % (
@@ -474,7 +504,7 @@ class Repository(object):
     def save(self, path=None):
         path = path or self.path
         if not path:
-            raise RepoError("Не задан файл реестра")
+            raise RepoError("No registry file is set")
         tmp = path + ".tmp"
         with io.open(tmp, "w", encoding="utf-8", newline="\n") as f:
             f.write(self.dumps())
@@ -485,7 +515,7 @@ class Repository(object):
 
     @property
     def url(self):
-        """Адрес реестра для «Модули - Настройки - Добавить»."""
+        """Registry address for "Plugins - Settings - Add"."""
         if not self.path:
             return ""
         if self.base_url:
@@ -494,27 +524,27 @@ class Repository(object):
 
 
 def loads(text, own_only=True):
-    """Реестр из текста plugins.xml.
+    """Registry from the text of plugins.xml.
 
-    own_only: отказ, если на корне нет метки generator="Repoliner".
+    own_only: refuses if the root has no generator="Repoliner" mark.
     """
     if len(text) > MAX_XML_BYTES:
-        raise RepoError("Файл реестра больше 5 МБ")
+        raise RepoError("The registry file is larger than 5 MB")
     try:
         root = _parse_xml(text)
     except XmlError as e:
-        raise RepoError("Файл реестра не разобран: %s" % e)
+        raise RepoError("The registry file was not parsed: %s", e)
     if root.tag != "plugins":
-        raise RepoError("Корневой элемент «%s», а ожидался plugins"
-                        % root.tag)
+        raise RepoError("The root element is “%s” and plugins was expected",
+                        root.tag)
     if own_only and root.get("generator") != GENERATOR:
-        raise RepoError(
-            "Реестр создан не модулем Repoliner. Открываются только "
-            "реестры с меткой generator=\"%s\"" % GENERATOR)
+        raise RepoError("The registry was not created by Repoliner. Only "
+                        "registries marked generator=\"%s\" are opened",
+                        GENERATOR)
     try:
         base = check_base_url(root.get("base_url", ""))
     except RepoError as e:
-        raise RepoError("Файл реестра испорчен: %s" % e)
+        raise RepoError("The registry file is broken: %s", e)
     repo = Repository(base_url=base)
     for node in root:
         if node.tag != "pyqgis_plugin":
@@ -526,8 +556,8 @@ def loads(text, own_only=True):
         version = node.get("version", "") or elements.get("version", "")
         e = PluginEntry(name, version, elements)
         if not e.file_name:
-            raise RepoError("У модуля «%s» нет ни file_name, ни "
-                            "download_url" % name)
+            raise RepoError("Plugin “%s” has neither file_name nor "
+                            "download_url", name)
         repo.put(e)
     repo.dirty = False
     return repo
@@ -535,16 +565,20 @@ def loads(text, own_only=True):
 
 def load(path, own_only=True):
     if os.path.getsize(path) > MAX_XML_BYTES:
-        raise RepoError("Файл реестра больше 5 МБ: %s" % path)
-    with io.open(path, encoding="utf-8-sig") as f:
-        text = f.read()
+        raise RepoError("The registry file is larger than 5 MB: %s", path)
+    try:
+        with io.open(path, encoding="utf-8-sig") as f:
+            text = f.read()
+    except (UnicodeDecodeError, ValueError):
+        # a zip or another binary file picked in the file dialog
+        raise RepoError("The registry file is not text: %s", path)
     repo = loads(text, own_only=own_only)
     repo.path = path
     return repo
 
 
 def new(path):
-    """Пустой реестр, сразу записанный на диск."""
+    """Empty registry, written to disk right away."""
     repo = Repository(path)
     repo.save()
     return repo

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Прогон окна без QGIS: PyQt6 и подставные qgis.core, qgis.PyQt.
+"""Run the dialog without QGIS: PyQt6 plus fake qgis.core, qgis.PyQt.
 
-Проверяет, что окно строится на Qt6 и действия проходят до конца:
-новый реестр, два архива, сохранение, чтение обратно, удаление
-отмеченного, закрытие. Диалоги выбора файлов подменены.
+Checks that the dialog builds on Qt6 and that the actions run to the
+end: new repository, two archives, save, read back, remove checked,
+close. The file choosers are replaced with stubs.
 
     QT_QPA_PLATFORM=offscreen python tools/smoke_view.py
 """
@@ -94,8 +94,8 @@ dlg.add_archives()
 top = dlg.tree.topLevelItem(0)
 assert top.childCount() == 2, top.childCount()
 assert top.text(0).endswith("*")
-print("статус:", dlg.status.text())
-print("строка:", [top.child(0).text(c) for c in range(5)])
+print("status:", dlg.status.text())
+print("row:", [top.child(0).text(c) for c in range(5)])
 dlg.save_repo()
 dlg.copy_url()
 assert QtWidgets.QApplication.clipboard().text().startswith("file:///")
@@ -106,7 +106,7 @@ dlg.tree.setCurrentItem(top.child(1))
 dlg.remove_checked()
 assert dlg.tree.topLevelItem(0).childCount() == 1
 dlg.refresh_repo()
-dlg.close()                     # несохранённое отбрасывается
+dlg.close()                     # unsaved changes are dropped
 dlg2 = view.RepoDialog(None)
 assert dlg2.tree.topLevelItem(0).childCount() == 2
 dlg2.tree.setCurrentItem(dlg2.tree.topLevelItem(0))
@@ -116,21 +116,21 @@ dlg2.open_repo()
 assert dlg2.tree.topLevelItemCount() == 1
 os.remove(arcs[1])
 dlg2._fill(select=0)
-print("без архива:", dlg2.tree.topLevelItem(0).child(1).text(4))
+print("no archive:", dlg2.tree.topLevelItem(0).child(1).text(4))
 
-# подключение в QGIS: один раз, повтор не дублирует
+# connect in QGIS: once, a repeat does not add a duplicate
 _store["app/plugin_repositories/Официальный/url"] = \
     "https://plugins.qgis.org/plugins/plugins.xml"
 dlg2.tree.setCurrentItem(dlg2.tree.topLevelItem(0))
 dlg2.connect_repo()
-print("подключение:", dlg2.status.text())
+print("connect:", dlg2.status.text())
 dlg2.connect_repo()
-print("повтор:", dlg2.status.text())
+print("repeat:", dlg2.status.text())
 names = view.qgis_repositories()
 assert len(names) == 2, names
 assert any(u.startswith("file:///") for _, u, _ in names), names
 
-# адрес сервера: архивы внутри папки реестра
+# server address: archives inside the repository folder
 import shutil  # noqa: E402
 inside = os.path.join(os.path.dirname(xml), "alpha.zip")
 shutil.copy(arcs[0], inside)
@@ -143,16 +143,16 @@ dlg3.add_archives()
 QtWidgets.QInputDialog.getText = staticmethod(
     lambda *a, **k: ("http://srv/plugins", True))
 dlg3.set_base()
-print("сервер:", dlg3.status.text())
+print("server:", dlg3.status.text())
 top = dlg3.tree.topLevelItem(0)
-print("строка:", top.text(3), "|", top.child(0).text(4))
+print("row:", top.text(3), "|", top.child(0).text(4))
 assert repo.url == "http://srv/plugins/plugins.xml", repo.url
 QtWidgets.QInputDialog.getText = staticmethod(
     lambda *a, **k: ("ftp://x", True))
 dlg3.set_base()
-print("отказ:", dlg3.status.text())
+print("rejected:", dlg3.status.text())
 assert repo.base_url == "http://srv/plugins/"
-# модули из других репозиториев: дубли каталога и та же версия
+# plugins from other repositories: duplicates and the same version
 pi = types.ModuleType("pyplugin_installer")
 pid = types.ModuleType("pyplugin_installer.installer_data")
 
@@ -182,6 +182,6 @@ dlg4 = view.RepoDialog(None)
 dlg4.new_repo()
 dlg4.add_archives()
 row = dlg4.tree.topLevelItem(dlg4.tree.topLevelItemCount() - 1).child(0)
-print("чужой:", row.text(4))
+print("foreign:", row.text(4))
 assert row.text(4).count("0.10.0") == 1 and "0.9.0" not in row.text(4)
-print("ОК")
+print("OK")

@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Гигиена поставки. Каталог plugins.qgis.org прогоняет архив через
-# сканер секретов, и служебный мусор ловится как находка: в июле 2026
-# `.pytest_cache/CACHEDIR.TAG` был помечен как «Potential Hex High
-# Entropy String» и заблокировал версию. Никакого секрета там нет, но
-# разбираться с блокировкой дороже, чем не класть мусор в архив.
+# Package hygiene. The plugins.qgis.org catalog runs the archive
+# through a secret scanner, and service junk is caught as a finding: in
+# July 2026 `.pytest_cache/CACHEDIR.TAG` was flagged as "Potential Hex
+# High Entropy String" and blocked the release. There is no secret
+# there, but dealing with the block costs more than not putting junk
+# into the archive.
 #     python repoliner/tests/test_package_hygiene.py
 import os
 import sys
@@ -16,10 +17,11 @@ import sys
 PKG = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    ".."))
 
-# Папки и файлы, которых в рабочем дереве быть не должно вовсе.
-# __pycache__ и .pyc сюда не входят: их создаёт сам Python при любом
-# запуске тестов, ловить их тестом бессмысленно. Из архива они убираются
-# при упаковке явными исключениями (см. правила релиза в AGENTS.md).
+# Folders and files that must not be in the working tree at all.
+# __pycache__ and .pyc are not included here: Python itself creates
+# them on any test run, catching them with a test makes no sense. They
+# are removed from the archive at packing time by explicit exclusions
+# (see the release rules in AGENTS.md).
 BANNED_DIRS = (".pytest_cache", ".ipynb_checkpoints", ".mypy_cache",
                ".ruff_cache", ".tox", ".idea", ".vscode")
 BANNED_SUFFIX = (".orig", ".rej", ".bak", ".swp")
@@ -51,7 +53,8 @@ def test_no_junk_files():
 
 
 def test_expected_layout():
-    """Костяк поставки на месте: без него архив собран неправильно."""
+    """The backbone of the package is in place: without it the archive
+    is built wrong."""
     for name in ("metadata.txt", "__init__.py", "plugin.py", "core.py",
                  "xmlparse.py", "view.py", "i18n.py", "qt_compat.py",
                  "icon.svg", "LICENSE"):
@@ -68,7 +71,7 @@ def _run():
         except Exception as exc:  # noqa: BLE001
             bad += 1
             print("FAIL %s: %s" % (name, exc))
-    print("%d тестов, ошибок %d" % (len(fns), bad))
+    print("%d tests, %d failed" % (len(fns), bad))
     return 1 if bad else 0
 
 

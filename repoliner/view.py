@@ -1,19 +1,23 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Окно Repoliner: набор реестров plugins.xml и модули в них.
+"""Repoliner window: the set of plugins.xml registries and the plugins
+in them.
 
-Расчёт и запись живут в core.py, окно только показывает дерево и
-передаёт действия. Список реестров хранится в настройках QGIS, а каждый
-реестр описан своим plugins.xml и больше нигде.
+Computation and writing live in core.py, the window only shows the tree
+and passes on the actions. The list of registries is kept in the QGIS
+settings, and each registry is described by its own plugins.xml and
+nowhere else.
 
-Архивы не копируются: адрес модуля в реестре ведёт на то место, где архив
-лежит. Перенос архива ломает установку из реестра, поэтому у каждого
-модуля показывается состояние архива.
+Archives are not copied: the address of a plugin in the registry leads
+to the place where the archive lies. Moving the archive breaks the
+installation from the registry, so the state of the archive is shown for
+every plugin.
 
-Окно немодальное: реестр собирают, поглядывая в менеджер модулей QGIS.
+The window is modeless: a registry is assembled while glancing at the
+QGIS plugin manager.
 """
 
 import os
@@ -31,7 +35,7 @@ except Exception:                                   # nosec
     _QGIS = False
 
 from . import core as pr
-from .i18n import tr
+from .i18n import tr, error_text
 
 SETTINGS_KEY = "Repoliner/repositories"
 QGIS_REPOS = "app/plugin_repositories"
@@ -51,7 +55,7 @@ def is_available():
 
 
 def _enum(owner, scope, name):
-    """Строгое имя перечисления (Qt6), иначе плоское (Qt5)."""
+    """Strict enumeration name (Qt6), otherwise the flat one (Qt5)."""
     holder = getattr(owner, scope, None)
     if holder is not None and hasattr(holder, name):
         return getattr(holder, name)
@@ -59,7 +63,7 @@ def _enum(owner, scope, name):
 
 
 def stored_paths():
-    """Пути к реестрам из настроек QGIS, по одному в строке."""
+    """Paths to the registries from the QGIS settings, one per line."""
     raw = QgsSettings().value(SETTINGS_KEY, "")
     if isinstance(raw, (list, tuple)):
         raw = "\n".join(str(x) for x in raw)
@@ -75,7 +79,7 @@ def _bare(url):
 
 
 def qgis_repositories():
-    """Репозитории менеджера модулей QGIS: [(имя, адрес, включён)]."""
+    """QGIS plugin manager repositories: [(name, address, enabled)]."""
     s = QgsSettings()
     s.beginGroup(QGIS_REPOS)
     try:
@@ -90,9 +94,10 @@ def qgis_repositories():
 
 
 def connect_to_qgis(name, url):
-    """Добавить реестр в менеджер модулей QGIS.
+    """Add a registry to the QGIS plugin manager.
 
-    Возвращает (имя, добавлен ли). Реестр с тем же адресом не дублируется.
+    Returns (name, whether it was added). A registry with the same
+    address is not duplicated.
     """
     repos = qgis_repositories()
     for key, u, _ in repos:
@@ -110,7 +115,7 @@ def connect_to_qgis(name, url):
 
 
 def reload_plugin_manager():
-    """Перечитать репозитории в менеджере модулей, как «Обновить все»."""
+    """Re-read repositories in the plugin manager, as "Reload all"."""
     try:
         from pyplugin_installer import instance
         instance().reloadAndExportData()
@@ -121,11 +126,11 @@ def reload_plugin_manager():
 
 
 def foreign_versions(own_urls):
-    """Модули, которые QGIS уже получил из других репозиториев.
+    """Plugins that QGIS has already got from other repositories.
 
-    {имя модуля: [(репозиторий, версия)]}. Берётся из того, что менеджер
-    модулей загрузил в этом сеансе, сеть не трогается. Пусто, если
-    менеджер ещё не открывался.
+    {plugin name: [(repository, version)]}. Taken from what the plugin
+    manager loaded in this session, the network is not touched. Empty if
+    the manager has not been opened yet.
     """
     own = set(_bare(u) for u in own_urls)
     try:
@@ -141,8 +146,8 @@ def foreign_versions(own_urls):
         for p in items:
             key = (p.get("id"), rname)
             ver = p.get("version_available", "") or ""
-            # каталог отдаёт стабильную и экспериментальную версии
-            # отдельными записями, остаётся старшая
+            # the catalog gives the stable and the experimental version
+            # as separate records, the higher one remains
             if key not in best or pr.version_key(ver) > \
                     pr.version_key(best[key]):
                 best[key] = ver
@@ -153,7 +158,7 @@ def foreign_versions(own_urls):
 
 
 def show_view(iface):
-    """Открывает окно. Повторный вызов поднимает уже открытое."""
+    """Opens the window. A repeat call raises the already open one."""
     win = iface.mainWindow() if iface is not None else None
     existing = getattr(show_view, "_dlg", None)
     if existing is None:
@@ -171,7 +176,7 @@ def show_view(iface):
 
 
 class RepoDialog(QDialog):
-    """Дерево «реестр - модули» и действия над ним."""
+    """The "registry - plugins" tree and the actions on it."""
 
     def __init__(self, iface, parent=None):
         super().__init__(parent)
@@ -180,11 +185,11 @@ class RepoDialog(QDialog):
         self.setMinimumSize(820, 460)
         self.setModal(False)
         self.setWindowModality(qtc.NonModal)
-        self.repos = []          # [(path, Repository или None, ошибка)]
+        self.repos = []          # [(path, Repository or None, error)]
         self._build()
         self._load_all()
 
-    # ---- интерфейс ----
+    # ---- interface ----
 
     def _button(self, row, text, slot, tip=""):
         b = QPushButton(text)
@@ -248,7 +253,7 @@ class RepoDialog(QDialog):
         self.status.setWordWrap(True)
         root.addWidget(self.status)
 
-    # ---- список реестров ----
+    # ---- list of registries ----
 
     def _load_all(self):
         self.repos = []
@@ -260,7 +265,9 @@ class RepoDialog(QDialog):
     def _read(path):
         try:
             return [path, pr.load(path), ""]
-        except (pr.RepoError, OSError) as e:
+        except pr.RepoError as e:
+            return [path, None, error_text(e)]
+        except OSError as e:
             return [path, None, str(e)]
 
     def _remember(self):
@@ -290,7 +297,9 @@ class RepoDialog(QDialog):
             return
         try:
             repo = pr.new(path)
-        except (pr.RepoError, OSError) as e:
+        except pr.RepoError as e:
+            self._say(tr("Реестр не создан: %s") % error_text(e))
+        except OSError as e:
             self._say(tr("Реестр не создан: %s") % e)
             return
         self._append([path, repo, ""])
@@ -322,7 +331,7 @@ class RepoDialog(QDialog):
         self._fill()
         self._say(tr("Реестр убран из списка, файл остался: %s") % path)
 
-    # ---- модули ----
+    # ---- plugins ----
 
     def add_archives(self):
         i = self._current_index()
@@ -342,7 +351,8 @@ class RepoDialog(QDialog):
         parts = [tr("Добавлено модулей %d, заменено %d")
                  % (len(added), len(replaced))]
         if errors:
-            parts.append(tr("Не прочитаны") + "\n" + "\n".join(errors))
+            parts.append(tr("Не прочитаны") + "\n"
+                         + "\n".join(error_text(x) for x in errors))
         self._say(". ".join(parts))
 
     def remove_checked(self):
@@ -373,7 +383,8 @@ class RepoDialog(QDialog):
         self._fill(select=i)
         parts = [tr("Обновлено модулей %d") % len(updated)]
         if errors:
-            parts.append(tr("Не прочитаны") + "\n" + "\n".join(errors))
+            parts.append(tr("Не прочитаны") + "\n"
+                         + "\n".join(error_text(x) for x in errors))
         self._say(". ".join(parts))
 
     def save_repo(self):
@@ -383,7 +394,9 @@ class RepoDialog(QDialog):
             return
         try:
             repo.save()
-        except (pr.RepoError, OSError) as e:
+        except pr.RepoError as e:
+            self._say(tr("Реестр не сохранён: %s") % error_text(e))
+        except OSError as e:
             self._say(tr("Реестр не сохранён: %s") % e)
             return
         self._fill(select=i)
@@ -432,12 +445,12 @@ class RepoDialog(QDialog):
         try:
             repo.set_base_url(text)
         except pr.RepoError as e:
-            self._say(tr("Адрес не изменён: %s") % e)
+            self._say(tr("Адрес не изменён: %s") % error_text(e))
             return
         self._fill(select=i)
         self._say(tr("Адреса архивов переписаны. Реестр не сохранён."))
 
-    # ---- дерево ----
+    # ---- tree ----
 
     def _fill(self, select=None):
         self.tree.clear()
@@ -482,7 +495,7 @@ class RepoDialog(QDialog):
                             "сольёт записи") % (len(owners) - 1))
         for rname, ver in foreign:
             if pr.version_key(ver) == pr.version_key(e.version):
-                continue            # та же версия, подменять нечем
+                continue            # same version, nothing to swap in
             notes.append(tr("есть в «%s» (%s), QGIS может показать ту "
                             "версию") % (rname, ver))
         if e.elements.get("experimental") == "True":
@@ -527,7 +540,7 @@ class RepoDialog(QDialog):
                   self.b_copy, self.b_connect, self.b_base):
             b.setEnabled(ok)
 
-    # ---- служебное ----
+    # ---- utility ----
 
     def _say(self, text):
         self.status.setText(text)
@@ -546,5 +559,5 @@ class RepoDialog(QDialog):
             event.ignore()
             return
         if dirty:
-            self._load_all()       # несохранённое отбрасывается
+            self._load_all()       # unsaved changes are discarded
         event.accept()

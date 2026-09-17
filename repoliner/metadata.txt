@@ -6,7 +6,7 @@ description=Builds a QGIS plugin repository (plugins.xml) from ready-made plugin
 about=Select plugin zip archives, and Repoliner reads metadata.txt from each of them and writes plugins.xml in the format of the QGIS plugin repository. Several repositories are kept at once, each with its own set of plugins. For every plugin the window shows whether its archive is in place and whether the archive version matches the registry. The registry address is copied in the file:/// form and added in Plugins - Manage and Install Plugins - Settings. Developed by Inform++ LLC (www.informpp.ru).
     .
     Выбираются zip-архивы модулей, Repoliner читает metadata.txt каждого из них и записывает plugins.xml в формате репозитория модулей QGIS. Окно держит несколько репозиториев, в каждом свой набор модулей. У каждого модуля видно, на месте ли архив и совпадает ли его версия с реестром. Адрес реестра копируется в виде file:/// и добавляется в Модули - Управление и установка модулей - Настройки. Разработано ООО «Информ++» (www.informpp.ru).
-version=0.1.4
+version=0.1.6
 author=ООО «Информ++»
 email=xbbster@gmail.com
 homepage=https://github.com/Valery35/repoliner
@@ -18,7 +18,18 @@ icon=icon.svg
 experimental=False
 deprecated=False
 hasProcessingProvider=no
-changelog=0.1.4
+changelog=0.1.6
+    - Выбор не текстового файла в «Открыть реестр» больше не роняет
+      окно. Раньше zip или картинка на месте plugins.xml давали окно с
+      ошибкой Python, теперь выводится обычное сообщение.
+    0.1.5
+    - Модуль стал двуязычным для тех, кто читает код. Комментарии,
+      документы и сообщения об ошибках написаны по-английски, русскими
+      остались надписи в окне и README на русском языке.
+    - Сообщения об ошибке показываются на языке интерфейса QGIS.
+      Например, испорченный файл реестра называется по-русски при
+      русском интерфейсе и по-английски при английском.
+    0.1.4
     - Первая версия в каталоге модулей QGIS. Модуль больше не помечен
       экспериментальным и виден без галки экспериментальных модулей.
     - Адреса страницы модуля, кода и трекера ошибок ведут на

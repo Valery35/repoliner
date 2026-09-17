@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 #
-# Repoliner - репозитории модулей QGIS.
-# © 2026 ООО «Информ++» (www.informpp.ru).
+# Repoliner - QGIS plugin repositories.
+# © 2026 Inform++ LLC / ООО «Информ++» (www.informpp.ru).
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-"""metadata.txt читается так же строго, как его читает каталог.
+"""metadata.txt is read as strictly as the catalog reads it.
 
-Каталог plugins.qgis.org разбирает файл configparser с интерполяцией,
-поэтому одиночный знак процента роняет загрузку.
+The plugins.qgis.org catalog parses the file with configparser with
+interpolation, so a single percent sign breaks the upload.
 """
 import configparser
 import os
@@ -30,7 +30,7 @@ def test_metadata_reads_with_strict_parser():
     for key in REQUIRED:
         assert cp.get("general", key).strip(), key
     for key in cp.options("general"):
-        cp.get("general", key)          # интерполяция на каждом поле
+        cp.get("general", key)          # interpolation on every field
 
 
 def test_version_is_first_in_changelog():
@@ -42,7 +42,7 @@ def test_version_is_first_in_changelog():
 
 
 def test_own_archive_gives_valid_entry(tmp_path=None):
-    """Собственный архив модуля превращается в запись реестра."""
+    """The plugin's own archive turns into a registry entry."""
     import tempfile
     import zipfile
     d = tempfile.mkdtemp()
