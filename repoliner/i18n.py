@@ -128,7 +128,6 @@ TRANSLATIONS = {
     'Отметьте модули, которые надо удалить из реестра.': 'Tick the plugins to delete from the registry.',
     'Удалено модулей %d. Реестр не сохранён.': 'Plugins deleted: %d. The registry is not saved.',
     'Обновлено модулей %d': 'Plugins updated: %d',
-    'Сохранено: %s': 'Saved: %s',
     'Сохраните реестр, иначе QGIS прочитает прежний файл.': 'Save the registry, otherwise QGIS reads the previous file.',
     'экспериментальный': 'experimental',
     'Выберите реестр в списке.': 'Select a registry in the list.',
@@ -155,6 +154,14 @@ TRANSLATIONS = {
     'Адрес не изменён: %s': 'Address not changed: %s',
     'Адреса архивов переписаны. Реестр не сохранён.': 'Archive addresses rewritten. The registry is not saved.',
     'есть в «%s» (%s), QGIS может показать ту версию': 'also in “%s” (%s), QGIS may show that version',
+    'Репозиторий модулей': 'Plugin repository',
+    'Размер': 'Size',
+    'Обновлён': 'Updated',
+    'В реестре нет модулей.': 'The registry holds no plugins.',
+    'Этот адрес добавляется в QGIS в Модули - Управление и установка модулей - Настройки - Добавить:': 'Add this address in QGIS under Plugins - Manage and Install Plugins - Settings - Add:',
+    'Собрано модулем Repoliner': 'Built by Repoliner',
+    'Файл реестра': 'Registry file',
+    'Сохранено: %s, страница %s': 'Saved: %s, page %s',
 }
 
 
@@ -214,6 +221,7 @@ MESSAGES = {
     'The registry file is broken: %s': 'Файл реестра испорчен: %s',
     'Plugin “%s” has neither file_name nor download_url': 'У модуля «%s» нет ни file_name, ни download_url',
     'The address of plugin “%s” is neither file:/// nor the server address of the registry: %s': 'Адрес модуля «%s» это не file:/// и не адрес сервера реестра: %s',
+
 
 # --- Messages of the XML parser (xmlparse.py) ---------------------------
     'The file breaks off inside an XML comment': 'Файл оборван внутри комментария XML',

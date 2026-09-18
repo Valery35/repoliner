@@ -35,9 +35,12 @@ third-party libraries. The version and the changelog are in
   and `tracker` (`/issues`) lead there as well. The first upload to the
   catalog is 0.1.4, without the "experimental" flag. On 17.09.2026 the
   code was published on GitHub, with a release tagged 0.1.4 and an
-  archive there too, and `repoliner_upload.zip` was uploaded to the
-  plugins.qgis.org catalog and waits for a moderator. The plugin page
-  is `https://plugins.qgis.org/plugins/repoliner/`.
+  archive there too. On 18.09.2026 the catalog approved version 0.1.6,
+  plugin_id 6346, the page is
+  `https://plugins.qgis.org/plugins/repoliner/`. The catalog renames
+  the archive to `repoliner.0.1.6.zip`, so the plugin name there is
+  `repoliner` and it merges with an entry of the same name in an own
+  registry. Version 0.1.7 has not been uploaded yet.
 - **A window on a panel**, not a Processing tool. A tree "registry -
   plugins" with check marks.
 - **The list of registries is kept in the QGIS settings**, key
@@ -62,6 +65,12 @@ third-party libraries. The version and the changelog are in
   is the server address plus the path from the registry folder. An
   archive outside the registry folder is not accepted when an address is
   set, and a change of the address is rolled back as a whole.
+- **The registry page** (0.1.7) is a plain `index.html` written next to
+  `plugins.xml` on every save. A stylesheet for the XML itself
+  (`xml-stylesheet` with XSLT, as the official catalog does) was
+  considered and dropped: Chrome removes XSLT on 17.11.2026, Firefox and
+  WebKit announced the same, and a local `file:///` registry does not get
+  its stylesheet applied anyway.
 - **Only own registries are opened**, with the mark
   `<plugins generator="Repoliner">`. A foreign file, including the
   official catalog, is not read. The core has `own_only=False`, from the
@@ -93,6 +102,15 @@ third-party libraries. The version and the changelog are in
   administrative share `\\127.0.0.1\C$` - the registry and the archive
   are read. Qt considers `file://localhost/...` a local drive and does
   not open it, so `localhost` is replaced with `127.0.0.1`.
+- A registry in a network folder works on a customer network. In
+  September 2026 Valery put the plugin archives on a company share,
+  built the registry there and connected it on a machine without
+  internet - the plugins install and the page opens. The address in the
+  QGIS settings is `file://<server>/<share>/.../plugins.xml`, with the
+  server name. On such machines the official repository is better
+  turned off: it is unreachable, so the manager reports an error at
+  every start, and while it is reachable it overrides plugins of the
+  same name from the own registry.
 - http was verified on QGIS 4.0.3 with a temporary server on 127.0.0.1 -
   a registry with `?qgis=4.0` and archives of 1.2 and 5.6 MB are
   downloaded, a missing archive gives ContentNotFoundError. A full

@@ -342,6 +342,70 @@ def _esc(s):
             .replace(">", "&gt;").replace('"', "&quot;"))
 
 
+# --- the page of the registry -------------------------------------------
+# A plain static page next to plugins.xml, so the registry can be looked
+# at in a browser. It is written on every save. A stylesheet for the XML
+# itself (xml-stylesheet with XSLT) was considered and dropped: browsers
+# are removing XSLT (Chrome in November 2026, Firefox and WebKit
+# announced the same), and for a registry on a disk the stylesheet of a
+# local file is not applied anyway.
+
+PAGE_NAME = "index.html"
+
+PAGE_LABELS = {
+    "title": "Plugin repository",
+    "plugin": "Plugin",
+    "version": "Version",
+    "qgis": "QGIS",
+    "size": "Size",
+    "updated": "Updated",
+    "experimental": "experimental",
+    "empty": "The registry holds no plugins.",
+    "how": "Add this address in QGIS under Plugins - Manage and Install "
+           "Plugins - Settings - Add:",
+    "made": "Built by Repoliner",
+    "registry": "Registry file",
+}
+
+PAGE_CSS = """
+body { font-family: system-ui, Arial, sans-serif; margin: 2em auto;
+       max-width: 60em; padding: 0 1em; color: #222; }
+h1 { font-size: 1.4em; margin-bottom: 0.2em; }
+table { border-collapse: collapse; width: 100%; margin-top: 1.2em; }
+th, td { text-align: left; padding: 0.45em 0.7em;
+         border-bottom: 1px solid #ddd; vertical-align: top; }
+th { background: #eef5f1; border-bottom: 2px solid #1f6f4a; }
+td.num { white-space: nowrap; }
+p.how { background: #f6f6f6; padding: 0.7em 1em; border-radius: 4px; }
+code { font-family: Consolas, monospace; }
+.desc { color: #555; font-size: 0.9em; }
+.exp { color: #a04000; font-size: 0.9em; }
+footer { margin-top: 2em; color: #777; font-size: 0.85em; }
+"""
+
+
+def plugin_version():
+    """Version of Repoliner itself, from its metadata.txt."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "metadata.txt")
+    parser = configparser.RawConfigParser(strict=False)
+    try:
+        with io.open(path, encoding="utf-8-sig") as f:
+            parser.read_file(f)
+        return parser.get("general", "version").strip()
+    except (configparser.Error, OSError, UnicodeDecodeError):
+        return ""
+
+
+def _size_text(path):
+    """Archive size in kilobytes or megabytes, empty if there is none."""
+    if not path or not os.path.isfile(path):
+        return ""
+    n = os.path.getsize(path)
+    return "%.1f MB" % (n / 1048576.0) if n >= 1048576 \
+        else "%.0f KB" % (n / 1024.0)
+
+
 class Repository(object):
     """Registry of one repository: path to plugins.xml and the plugin
     records."""
@@ -501,7 +565,72 @@ class Repository(object):
         lines.append("</plugins>")
         return "\n".join(lines) + "\n"
 
-    def save(self, path=None):
+    def page(self, labels=None, version="", lang="en"):
+        """The page of the registry as HTML text.
+
+        labels - the captions in the language of the caller, see
+        PAGE_LABELS. version - the version of Repoliner for the footer.
+        lang - the language code written into the html tag.
+        """
+        t = dict(PAGE_LABELS)
+        t.update(labels or {})
+        name = os.path.basename(os.path.dirname(os.path.abspath(self.path))) \
+            if self.path else ""
+        head = "%s%s" % (t["title"], " - " + name if name else "")
+        rows = []
+        for e in sorted(self.entries, key=lambda x: x.name.lower()):
+            lo, hi = e.qgis_range
+            note = ' <span class="exp">(%s)</span>' % _esc(t["experimental"]) \
+                if e.elements.get("experimental") == "True" else ""
+            desc = e.elements.get("description", "")
+            rows.append(
+                "    <tr><td><a href=\"%s\">%s</a>%s%s</td>"
+                "<td class=\"num\">%s</td><td class=\"num\">%s - %s</td>"
+                "<td class=\"num\">%s</td><td class=\"num\">%s</td></tr>"
+                % (_esc(e.download_url), _esc(e.name), note,
+                   '<div class="desc">%s</div>' % _esc(desc) if desc else "",
+                   _esc(e.version), _esc(lo), _esc(hi),
+                   _esc(_size_text(self.local_path(e))),
+                   _esc(e.elements.get("update_date", "")[:10])))
+        if rows:
+            table = ["  <table>",
+                     "    <tr><th>%s</th><th>%s</th><th>%s</th><th>%s</th>"
+                     "<th>%s</th></tr>"
+                     % (_esc(t["plugin"]), _esc(t["version"]),
+                        _esc(t["qgis"]), _esc(t["size"]),
+                        _esc(t["updated"]))] + rows + ["  </table>"]
+        else:
+            table = ["  <p>%s</p>" % _esc(t["empty"])]
+        made = "%s %s" % (t["made"], version) if version else t["made"]
+        xml_name = os.path.basename(self.path) if self.path else "plugins.xml"
+        return "\n".join([
+            "<!DOCTYPE html>",
+            '<html lang="%s">' % _esc(lang or "en"),
+            "<head>",
+            '  <meta charset="utf-8">',
+            '  <meta name="viewport" content="width=device-width, '
+            'initial-scale=1">',
+            "  <title>%s</title>" % _esc(head),
+            "  <style>%s  </style>" % PAGE_CSS,
+            "</head>",
+            "<body>",
+            "  <h1>%s</h1>" % _esc(head),
+            '  <p class="how">%s<br><code>%s</code></p>'
+            % (_esc(t["how"]), _esc(self.url)),
+        ] + table + [
+            "  <footer>%s. %s: <a href=\"%s\">%s</a>. %s</footer>"
+            % (_esc(made), _esc(t["registry"]), _esc(xml_name),
+               _esc(xml_name),
+               _esc(time.strftime("%Y-%m-%d %H:%M"))),
+            "</body>",
+            "</html>",
+            ""])
+
+    def page_path(self):
+        return os.path.join(self.folder, PAGE_NAME) if self.path else ""
+
+    def save(self, path=None, labels=None, version="", lang="en"):
+        """Write plugins.xml and the page next to it."""
         path = path or self.path
         if not path:
             raise RepoError("No registry file is set")
@@ -511,6 +640,10 @@ class Repository(object):
         os.replace(tmp, path)
         self.path = path
         self.dirty = False
+        page = self.page(labels, version, lang)
+        with io.open(self.page_path(), "w", encoding="utf-8",
+                     newline="\n") as f:
+            f.write(page)
         return path
 
     @property

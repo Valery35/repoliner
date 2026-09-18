@@ -21,6 +21,7 @@ What is checked is what decides whether QGIS sees the plugin at all:
 
 Run:  python repoliner/tests/test_core.py
 """
+import io
 import os
 import shutil
 import sys
@@ -313,6 +314,67 @@ def test_binary_file_is_refused_as_registry():
             assert "not text" in str(e), e
         else:
             raise AssertionError("a binary file was read as a registry")
+
+
+def test_save_writes_a_page_next_to_the_registry():
+    """The page is what a browser shows for the registry.
+
+    Checked: it appears on save, holds a row per plugin with the version
+    and a link to the archive, the markup parses, and the text is
+    escaped.
+    """
+    from html.parser import HTMLParser
+
+    class _Rows(HTMLParser):
+        def __init__(self):
+            HTMLParser.__init__(self)
+            self.rows = 0
+            self.links = []
+            self.data = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "tr":
+                self.rows += 1
+            if tag == "a":
+                self.links += [v for k, v in attrs if k == "href"]
+
+        def handle_data(self, data):
+            self.data.append(data)
+
+    with _Tmp() as d:
+        a, b = _two(d)
+        repo = pr.Repository(os.path.join(d, "plugins.xml"))
+        repo.add_archives([a, b])
+        repo.save(version="9.9.9")
+        page = os.path.join(d, pr.PAGE_NAME)
+        assert os.path.isfile(page)
+        text = io.open(page, encoding="utf-8").read()
+        p = _Rows()
+        p.feed(text)
+        assert p.rows == 3, p.rows           # заголовок и два модуля
+        assert repo.find("alpha").download_url in p.links
+        assert repo.find("beta_plugin").download_url in p.links
+        assert repo.url in text
+        joined = "".join(p.data)
+        assert "Alpha" in joined and "1.0.0" in joined
+        assert "2.1.0" in joined and "3.16" in joined
+        assert "Repoliner 9.9.9" in joined
+        # экранирование: описание в образце содержит & и <тег>
+        assert "&amp;" in text and "&lt;" in text
+        assert "<тегов>" not in text
+        # размер архива подставлен
+        assert "KB" in joined or "MB" in joined
+        # свои подписи
+        repo.save(labels={"plugin": "Модуль", "download": "Скачать"})
+        assert "Модуль" in io.open(page, encoding="utf-8").read()
+
+
+def test_empty_registry_page_says_so():
+    with _Tmp() as d:
+        repo = pr.new(os.path.join(d, "plugins.xml"))
+        text = io.open(os.path.join(d, pr.PAGE_NAME), encoding="utf-8").read()
+        assert "no plugins" in text
+        assert "<table" not in text
 
 
 def test_new_registry_is_empty_and_own():

@@ -38,6 +38,8 @@ Russian.
 
 ## Changes
 
+- **0.1.7** - a page `index.html` is written next to `plugins.xml`, so the registry can be viewed in a browser.
+
 - **0.1.6** - a file that is not text, picked as a registry, gives a message instead of an error window.
 - **0.1.5** - the repository is in English, the messages of the core follow the language of the QGIS interface.
 

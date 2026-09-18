@@ -35,7 +35,7 @@ except Exception:                                   # nosec
     _QGIS = False
 
 from . import core as pr
-from .i18n import tr, error_text
+from .i18n import tr, error_text, language
 
 SETTINGS_KEY = "Repoliner/repositories"
 QGIS_REPOS = "app/plugin_repositories"
@@ -387,20 +387,40 @@ class RepoDialog(QDialog):
                          + "\n".join(error_text(x) for x in errors))
         self._say(". ".join(parts))
 
+    @staticmethod
+    def _page_labels():
+        """Captions of the registry page in the language of QGIS."""
+        return {
+            "title": tr("Репозиторий модулей"),
+            "plugin": tr("Модуль"),
+            "version": tr("Версия"),
+            "qgis": tr("QGIS"),
+            "size": tr("Размер"),
+            "updated": tr("Обновлён"),
+            "experimental": tr("экспериментальный"),
+            "empty": tr("В реестре нет модулей."),
+            "how": tr("Этот адрес добавляется в QGIS в Модули - Управление "
+                      "и установка модулей - Настройки - Добавить:"),
+            "made": tr("Собрано модулем Repoliner"),
+            "registry": tr("Файл реестра"),
+        }
+
     def save_repo(self):
         i = self._current_index()
         repo = self._current_repo(i)
         if repo is None:
             return
         try:
-            repo.save()
+            repo.save(labels=self._page_labels(),
+                      version=pr.plugin_version(), lang=language())
         except pr.RepoError as e:
             self._say(tr("Реестр не сохранён: %s") % error_text(e))
         except OSError as e:
             self._say(tr("Реестр не сохранён: %s") % e)
             return
         self._fill(select=i)
-        self._say(tr("Сохранено: %s") % repo.path)
+        self._say(tr("Сохранено: %s, страница %s")
+                  % (repo.path, os.path.basename(repo.page_path())))
 
     def copy_url(self):
         repo = self._current_repo(self._current_index())
