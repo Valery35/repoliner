@@ -98,7 +98,6 @@ TRANSLATIONS = {
     'архива по адресу нет': 'no archive at the address',
     'архив не совпадает с реестром, перечитайте архивы': 'the archive does not match the registry, reread the archives',
     'адрес вне реестра, архив не проверяется': 'address outside the registry, the archive is not checked',
-    'Repoliner - репозитории модулей': 'Repoliner - plugin repositories',
     'Новый реестр…': 'New registry…',
     'Создать пустой plugins.xml и добавить его в список': 'Create an empty plugins.xml and add it to the list',
     'Открыть реестр…': 'Open registry…',

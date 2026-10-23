@@ -181,7 +181,7 @@ class RepoDialog(QDialog):
     def __init__(self, iface, parent=None):
         super().__init__(parent)
         self.iface = iface
-        self.setWindowTitle(tr("Repoliner - репозитории модулей"))
+        self.setWindowTitle("Repoliner")
         self.setMinimumSize(820, 460)
         self.setModal(False)
         self.setWindowModality(qtc.NonModal)
